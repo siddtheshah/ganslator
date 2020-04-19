@@ -1,21 +1,23 @@
 
 Data:
     - Get speech translation data
-        > Preferably through fisher spanish-english dataset. But it costs money
-        > Columbia might pay for it. Ping the thread on piazza.
-        > Alternative is to potentially create your own through anime subs/dubs.
-        > That is a heinous amount of work though, and would fill up my hard drive very quickly.
+        > Resolved. Using emotion dataset instead.
+        > Same principle, much easier domains and I don't have to pay for it.
 
 Network:
     - Verify/Inspect wavegan on audio data
         > Need a strong understanding of how wavegan works.
         > Figure out what works and doesn't work on Tensorflow 2.1.0.
         > Will also let me understand how to use audio input.
-        > The problems I face is that
+    - Rewrite wavegan for TF 2.0, verify it can run on sample audio data.
+        > Almost certainly necessary.
+        > Start with one generator/discriminator.
+        > Write basic training loop and verify that it works.
     - Write attention mechanism
         > Refer to convolutional attention GAN
+        > Then modify the generator/discriminator with attention, possibly writing new versions.
     - Write cyclic loss mechanism
         > Refer to cyclegan
-    - Rewrite wavegan, verify it can run on sample audio data.
-        > Almost certainly necessary.
+        > Set up cyclic loss training loop, and verify it works.
     - Begin iterating on training data
+        > Adjust parameters

@@ -12,7 +12,7 @@ class GeneratorTest(tf.test.TestCase):
         fake_input = tf.random.uniform((10, 4096, 32))
         fake_rand = tf.random.uniform((10, 100))
         result = model.predict({"Cond_in": fake_input, "Z_in": fake_rand})
-        print(result)
+        self.assertAllEqual(tf.shape(result), [10, 4096, 33])
         self.assertNotEqual(tf.math.count_nonzero(result), 0)
 
 

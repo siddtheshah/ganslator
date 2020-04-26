@@ -3,81 +3,79 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 
 from tensorflow.keras.datasets import mnist
-from tensorflow.keras.layers import Input, Dense, Reshape, Flatten, Dropout, Concatenate
-from tensorflow.keras.layers import BatchNormalization, Activation, ZeroPadding2D
-from tensorflow.keras.layers import LeakyReLU
-from tensorflow.keras.layers import UpSampling2D, Conv2D
-from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.optimizers import Adam
 import datetime
 import matplotlib.pyplot as plt
+
+from network.discriminator import *
+from network.generator import *
 
 import sys
 import numpy as np
 import os
 
-class CycleGAN():
-    def __init__(self, discriminator_fn, generator_fn):
+class GANslator():
+    def __init__(self,
+                 sample_size=16384,
+                 feature_size=32,
+                 r_scale=16,
+                 z_dim=100,
+                 filter_dim=64):
+
+        # Store parameters for building sub-models
+        self.sample_size = sample_size
+        self.feature_size = feature_size
+        self.r_scale = r_scale
+        self.z_dim = z_dim
+        self.filter_dim = filter_dim
+
         # Input shape
-        self.img_rows = 128
-        self.img_cols = 128
-        self.channels = 3
-        self.img_shape = (self.img_rows, self.img_cols, self.channels)
-
-        # Configure data loader
-        self.dataset_name = 'apple2orange'
-        self.data_loader = DataLoader(dataset_name=self.dataset_name,
-                                      img_res=(self.img_rows, self.img_cols))
-
-
-        # Calculate output shape of D (PatchGAN)
-        patch = int(self.img_rows / 2**4)
-        self.disc_patch = (patch, patch, 1)
-
-        # Number of filters in the first layer of G and D
-        self.gf = 32
-        self.df = 64
+        self.input_shape = tf.shape([self.sample_size])
+        self.noise_shape = tf.shape([self.z_dim])
 
         # Loss weights
         self.lambda_cycle = 10.0                    # Cycle-consistency loss
         self.lambda_id = 0.1 * self.lambda_cycle    # Identity loss
 
-        optimizer = Adam(0.0002, 0.5)
-
-        # Build and compile the discriminators
-        self.d_A = self.build_discriminator()
-        self.d_B = self.build_discriminator()
-        self.d_A.compile(loss='mse',
-            optimizer=optimizer,
-            metrics=['accuracy'])
-        self.d_B.compile(loss='mse',
-            optimizer=optimizer,
-            metrics=['accuracy'])
-
-        #-------------------------
-        # Construct Computational
-        #   Graph of Generators
-        #-------------------------
+        self.optimizer = Adam(0.0002, 0.5)
 
         # Build the generators
         self.g_AB = self.build_generator()
         self.g_BA = self.build_generator()
 
+        # Build the discriminators
+        self.d_A = self.build_discriminator()
+        self.d_B = self.build_discriminator()
+
+        # Build the combined models
+        self.d_combined = self.build_combined_discriminator_model()
+        self.g_combined = self.build_combined_generator_model()
+
+    def build_combined_generator_model(self):
+        #-------------------------
+        # Construct Computational
+        #   Graph of Generators
+        #-------------------------
+
         # Input images from both domains
-        img_A = Input(shape=self.img_shape)
-        img_B = Input(shape=self.img_shape)
+        signal_A = tf.keras.layers.Input(shape=self.input_shape)
+        signal_B = tf.keras.layers.Input(shape=self.input_shape)
+        noise = tf.keras.layers.Input(shape=self.noise_shape)
+
+        features_A = MelSpecFeatures(signal_A)
+        features_B = MelSpecFeatures(signal_B)
 
         # Translate images to the other domain
-        fake_B = self.g_AB(img_A)
-        fake_A = self.g_BA(img_B)
+        fake_B = self.g_AB(features_A, noise)[:, 0]
+        fake_A = self.g_BA(features_B, noise)[:, 0]
         # Translate images back to original domain
-        reconstr_A = self.g_BA(fake_B)
-        reconstr_B = self.g_AB(fake_A)
+        reconstr_A = self.g_BA(fake_B, noise)[:, 0]
+        reconstr_B = self.g_AB(fake_A, noise)[:, 0]
         # Identity mapping of images
-        img_A_id = self.g_BA(img_A)
-        img_B_id = self.g_AB(img_B)
+        img_A_id = self.g_BA(features_A, noise)[:, 0]
+        img_B_id = self.g_AB(features_B, noise)[:, 0]
 
-        # For the combined model we will only train the generators
+        # Only train the generators
         self.d_A.trainable = False
         self.d_B.trainable = False
 
@@ -86,108 +84,87 @@ class CycleGAN():
         valid_B = self.d_B(fake_B)
 
         # Combined model trains generators to fool discriminators
-        self.combined = Model(inputs=[img_A, img_B],
-                              outputs=[ valid_A, valid_B,
+        combined = Model(inputs=[signal_A, signal_B, noise],
+                              outputs=[valid_A, valid_B,
                                         reconstr_A, reconstr_B,
-                                        img_A_id, img_B_id ])
-        self.combined.compile(loss=['mse', 'mse',
+                                        img_A_id, img_B_id])
+        combined.compile(loss=['mse', 'mse',
                                     'mae', 'mae',
                                     'mae', 'mae'],
-                            loss_weights=[  1, 1,
+                            loss_weights=[1, 1,
                                             self.lambda_cycle, self.lambda_cycle,
-                                            self.lambda_id, self.lambda_id ],
-                            optimizer=optimizer)
+                                            self.lambda_id, self.lambda_id],
+                            optimizer=self.optimizer)
+
+        return combined
+
+    def build_combined_discriminator_model(self):
+        #-------------------------
+        # Construct Computational
+        #   Graph of Discriminators
+        #-------------------------
+
+        # Input images from both domains
+        signal_A = tf.keras.layers.Input(shape=self.input_shape)
+        signal_B = tf.keras.layers.Input(shape=self.input_shape)
+        noise = tf.keras.layers.Input(shape=self.noise_shape)
+
+        features_A = MelSpecFeatures(signal_A)
+        features_B = MelSpecFeatures(signal_B)
+
+        fake_B = self.g_AB.predict(signal_A, noise)
+        fake_A = self.g_BA.predict(signal_B, noise)
+
+        # Only train the generators
+        self.g_A.trainable = False
+        self.g_B.trainable = False
+
+        # Get discriminator outputs
+        d_valid_A = self.d_A(features_A)
+        d_valid_B = self.d_B(features_B)
+        d_fake_A = self.d_A(fake_A)
+        d_fake_B = self.d_B(fake_B)
+
+        combined = Model(inputs=[signal_A, signal_B, noise], outputs=[d_valid_A, d_valid_B, d_fake_A, d_fake_B])
+        combined.compile(loss='mse', optimizer=self.optimizer, metrics=['accuracy'])
+
+        return combined
+        #
+        # dA_loss_real = self.d_A.train_on_batch(features_A, features_valid)
+        # dA_loss_fake = self.d_A.train_on_batch(fake_A, features_fake)
+        # dA_loss = 0.5 * np.add(dA_loss_real, dA_loss_fake)
+        #
+        # dB_loss_real = self.d_B.train_on_batch(features_B, features_valid)
+        # dB_loss_fake = self.d_B.train_on_batch(fake_B, features_fake)
+        # dB_loss = 0.5 * np.add(dB_loss_real, dB_loss_fake)
+        # # Total disciminator loss
+        # d_loss = 0.5 * np.add(dA_loss, dB_loss)
+
 
     def build_generator(self):
-        """U-Net Generator"""
-
-        def conv2d(layer_input, filters, f_size=4):
-            """Layers used during downsampling"""
-            d = Conv2D(filters, kernel_size=f_size, strides=2, padding='same')(layer_input)
-            d = LeakyReLU(alpha=0.2)(d)
-            d = InstanceNormalization()(d)
-            return d
-
-        def deconv2d(layer_input, skip_input, filters, f_size=4, dropout_rate=0):
-            """Layers used during upsampling"""
-            u = UpSampling2D(size=2)(layer_input)
-            u = Conv2D(filters, kernel_size=f_size, strides=1, padding='same', activation='relu')(u)
-            if dropout_rate:
-                u = Dropout(dropout_rate)(u)
-            u = InstanceNormalization()(u)
-            u = Concatenate()([u, skip_input])
-            return u
-
-        # Image input
-        d0 = Input(shape=self.img_shape)
-
-        # Downsampling
-        d1 = conv2d(d0, self.gf)
-        d2 = conv2d(d1, self.gf*2)
-        d3 = conv2d(d2, self.gf*4)
-        d4 = conv2d(d3, self.gf*8)
-
-        # Upsampling
-        u1 = deconv2d(d4, d3, self.gf*4)
-        u2 = deconv2d(u1, d2, self.gf*2)
-        u3 = deconv2d(u2, d1, self.gf)
-
-        u4 = UpSampling2D(size=2)(u3)
-        output_img = Conv2D(self.channels, kernel_size=4, strides=1, padding='same', activation='tanh')(u4)
-
-        return Model(d0, output_img)
+        return GeneratorModel(self.sample_size, self.feature_size, self.z_dim, self.r_scale, self.filter_dim)
 
     def build_discriminator(self):
+        return DiscriminatorModel(self.sample_size, self.feature_size, self.r_scale, self.z_dim)
 
-        def d_layer(layer_input, filters, f_size=4, normalization=True):
-            """Discriminator layer"""
-            d = Conv2D(filters, kernel_size=f_size, strides=2, padding='same')(layer_input)
-            d = LeakyReLU(alpha=0.2)(d)
-            if normalization:
-                d = InstanceNormalization()(d)
-            return d
-
-        img = Input(shape=self.img_shape)
-
-        d1 = d_layer(img, self.df, normalization=False)
-        d2 = d_layer(d1, self.df*2)
-        d3 = d_layer(d2, self.df*4)
-        d4 = d_layer(d3, self.df*8)
-
-        validity = Conv2D(1, kernel_size=4, strides=1, padding='same')(d4)
-
-        return Model(img, validity)
-
-    def train(self, epochs, batch_size=1, sample_interval=50):
+    def train(self, dataset, epochs, batch_size=1, sample_interval=50):
 
         start_time = datetime.datetime.now()
 
         # Adversarial loss ground truths
-        valid = np.ones((batch_size,) + self.disc_patch)
-        fake = np.zeros((batch_size,) + self.disc_patch)
+        valid = np.ones(batch_size)
+        fake = np.zeros(batch_size)
 
         for epoch in range(epochs):
-            for batch_i, (imgs_A, imgs_B) in enumerate(self.data_loader.load_batch(batch_size)):
+            for batch_i, (signals_A, signals_B) in enumerate(dataset.batch(batch_size)):
+                noise = tf.random.normal((batch_size, self.z_dim))
 
                 # ----------------------
                 #  Train Discriminators
                 # ----------------------
 
-                # Translate images to opposite domain
-                fake_B = self.g_AB.predict(imgs_A)
-                fake_A = self.g_BA.predict(imgs_B)
-
-                # Train the discriminators (original images = real / translated = Fake)
-                dA_loss_real = self.d_A.train_on_batch(imgs_A, valid)
-                dA_loss_fake = self.d_A.train_on_batch(fake_A, fake)
-                dA_loss = 0.5 * np.add(dA_loss_real, dA_loss_fake)
-
-                dB_loss_real = self.d_B.train_on_batch(imgs_B, valid)
-                dB_loss_fake = self.d_B.train_on_batch(fake_B, fake)
-                dB_loss = 0.5 * np.add(dB_loss_real, dB_loss_fake)
-
-                # Total disciminator loss
-                d_loss = 0.5 * np.add(dA_loss, dB_loss)
+                d_loss = self.d_combined.train_on_batch([signals_A, signals_B, noise],
+                                                        [valid, valid, fake, fake])
 
 
                 # ------------------
@@ -195,64 +172,75 @@ class CycleGAN():
                 # ------------------
 
                 # Train the generators
-                g_loss = self.combined.train_on_batch([imgs_A, imgs_B],
+                g_loss = self.g_combined.train_on_batch([signals_A, signals_B, noise],
                                                         [valid, valid,
-                                                        imgs_A, imgs_B,
-                                                        imgs_A, imgs_B])
+                                                        signals_A, signals_B,
+                                                        signals_A, signals_B])
 
                 elapsed_time = datetime.datetime.now() - start_time
 
                 # Plot the progress
-                print ("[Epoch %d/%d] [Batch %d/%d] [D loss: %f, acc: %3d%%] [G loss: %05f, adv: %05f, recon: %05f, id: %05f] time: %s " \
-                                                                        % ( epoch, epochs,
-                                                                            batch_i, self.data_loader.n_batches,
-                                                                            d_loss[0], 100*d_loss[1],
-                                                                            g_loss[0],
-                                                                            np.mean(g_loss[1:3]),
-                                                                            np.mean(g_loss[3:5]),
-                                                                            np.mean(g_loss[5:6]),
-                                                                            elapsed_time))
+                print(
+                    "[Epoch {:d}/{:d}] [Batch {:d}] [D loss: {:f}, acc: {:3d}%] [G loss: {:05f}, adv: {:05f}, recon: {:05f}, id: {:05f}] time: {} " \
+                    .format(epoch, epochs,
+                            batch_i,
+                            d_loss[0], 100 * d_loss[1],
+                            g_loss[0],
+                            np.mean(g_loss[1:3]),
+                            np.mean(g_loss[3:5]),
+                            np.mean(g_loss[5:6]),
+                            elapsed_time))
 
                 # If at save interval => save generated image samples
                 if batch_i % sample_interval == 0:
-                    self.sample_images(epoch, batch_i)
+                    self.sample_images(epoch, batch_i, signals_A[0], signals_B[0], noise[0])
 
-    def sample_images(self, epoch, batch_i):
-        os.makedirs('images/%s' % self.dataset_name, exist_ok=True)
-        r, c = 2, 3
+    def sample_sounds(self, epoch, batch_i, signal_A, signal_B, noise):
+        os.makedirs('audio/generated_samples', exist_ok=True)
 
-        imgs_A = self.data_loader.load_data(domain="A", batch_size=1, is_testing=True)
-        imgs_B = self.data_loader.load_data(domain="B", batch_size=1, is_testing=True)
+        # Get fake and reconstructed outputs
+        fake_B = self.g_AB.predict(signal_A, noise)[:, 0]
+        fake_A = self.g_BA.predict(signal_B, noise)[:, 0]
 
-        # Demo (for GIF)
-        #imgs_A = self.data_loader.load_img('datasets/apple2orange/testA/n07740461_1541.jpg')
-        #imgs_B = self.data_loader.load_img('datasets/apple2orange/testB/n07749192_4241.jpg')
+        reconstr_A = self.g_BA.predict(fake_B, noise)[:, 0]
+        reconstr_B = self.g_AB.predict(fake_A, noise)[:, 0]
 
-        # Translate images to the other domain
-        fake_B = self.g_AB.predict(imgs_A)
-        fake_A = self.g_BA.predict(imgs_B)
-        # Translate back to original domain
-        reconstr_A = self.g_BA.predict(fake_B)
-        reconstr_B = self.g_AB.predict(fake_A)
+        prefix = "results/epoch_{}_batch_{}" % epoch, batch_i
+        wav_suffix = ".wav"
+        img_suffix = ".jpg"
 
-        gen_imgs = np.concatenate([imgs_A, fake_B, reconstr_A, imgs_B, fake_A, reconstr_B])
+        plt.figure()
+        plt.plot(signal_A.numpy())
+        plt.savefig(prefix + "signal_A" + img_suffix)
 
-        # Rescale images 0 - 1
-        gen_imgs = 0.5 * gen_imgs + 0.5
+        plt.clf()
+        plt.plot(signal_B.numpy())
+        plt.savefig(prefix + "signal_B" + img_suffix)
 
-        titles = ['Original', 'Translated', 'Reconstructed']
-        fig, axs = plt.subplots(r, c)
-        cnt = 0
-        for i in range(r):
-            for j in range(c):
-                axs[i,j].imshow(gen_imgs[cnt])
-                axs[i, j].set_title(titles[j])
-                axs[i,j].axis('off')
-                cnt += 1
-        fig.savefig("images/%s/%d_%d.png" % (self.dataset_name, epoch, batch_i))
-        plt.close()
+        plt.clf()
+        plt.plot(fake_A.numpy())
+        plt.savefig(prefix + "fake_A" + img_suffix)
 
+        plt.clf()
+        plt.plot(fake_B.numpy())
+        plt.savefig(prefix + "fake_B" + img_suffix)
+
+        plt.clf()
+        plt.plot(reconstr_A.numpy())
+        plt.savefig(prefix + "reconstr_A" + img_suffix)
+
+        plt.clf()
+        plt.plot(reconstr_B.numpy())
+        plt.savefig(prefix + "reconstr_B" + img_suffix)
+
+        # Save some sample sounds
+        fake_A_encode = tf.audio.encode_wav(fake_A)
+        tf.io.write_file(prefix + "fake_A" + wav_suffix, fake_A_encode)
+
+        fake_B_encode = tf.audio.encode_wav(fake_B)
+        tf.io.write_file(prefix + "fake_B" + wav_suffix, fake_B_encode)
 
 if __name__ == '__main__':
-    gan = CycleGAN()
-    gan.train(epochs=200, batch_size=1, sample_interval=200)
+    gan = GANslator()
+
+    gan.train(batch_size=1, epochs=200, sample_interval=200)

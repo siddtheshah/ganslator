@@ -1,91 +1,41 @@
 import tensorflow as tf
 import tensorflow_io as tfio
 import tensorflow_datasets as tfds
+import tensorflow_addons as tfa
+from network.conv import *
 
 """
-  Input: [None, slice_len, nch]
-  Output: [None] (linear output)
+  Input: [batch_size, samples, features] representing the real or generated audio. 
+  Output: [0-1] indicating whether the output is part of domain A or B.
 """
-def WaveGANDiscriminator(
-    x,
-    kernel_len=25,
-    dim=64,
-    use_batchnorm=False,
-    phaseshuffle_rad=0):
-  batch_size = tf.shape(x)[0]
-  slice_len = int(x.get_shape()[1])
 
-  if use_batchnorm:
-    batchnorm = lambda x: tf.layers.batch_normalization(x, training=True)
-  else:
-    batchnorm = lambda x: x
 
-  if phaseshuffle_rad > 0:
-    phaseshuffle = lambda x: apply_phaseshuffle(x, phaseshuffle_rad)
-  else:
-    phaseshuffle = lambda x: x
+def DiscriminatorFn(
+        input,  # Has size [batch_size, samples, features]
+        samples,
+        r_scale,
+        conv_size=32,
+        filters=64):
+    # Take the input and convolve over the time dimension several times. Collapse filters and get a score of 0-1 at the end.
+    # TODO: Look into phase shuffling
 
-  # Layer 0
-  # [16384, 1] -> [4096, 64]
-  output = x
-  with tf.variable_scope('downconv_0'):
-    output = tf.layers.conv1d(output, dim, kernel_len, 4, padding='SAME')
-  output = lrelu(output)
-  output = phaseshuffle(output)
+    conv1 = temporal_conv_downsample(input, filters, conv_size, r_scale)
+    samples //= r_scale
 
-  # Layer 1
-  # [4096, 64] -> [1024, 128]
-  with tf.variable_scope('downconv_1'):
-    output = tf.layers.conv1d(output, dim * 2, kernel_len, 4, padding='SAME')
-    output = batchnorm(output)
-  output = lrelu(output)
-  output = phaseshuffle(output)
+    conv2 = temporal_conv_downsample(conv1, filters, conv_size, r_scale)
+    samples //= r_scale
 
-  # Layer 2
-  # [1024, 128] -> [256, 256]
-  with tf.variable_scope('downconv_2'):
-    output = tf.layers.conv1d(output, dim * 4, kernel_len, 4, padding='SAME')
-    output = batchnorm(output)
-  output = lrelu(output)
-  output = phaseshuffle(output)
+    conv3 = temporal_conv_downsample(conv2, filters, conv_size, r_scale)
+    samples //= r_scale
 
-  # Layer 3
-  # [256, 256] -> [64, 512]
-  with tf.variable_scope('downconv_3'):
-    output = tf.layers.conv1d(output, dim * 8, kernel_len, 4, padding='SAME')
-    output = batchnorm(output)
-  output = lrelu(output)
-  output = phaseshuffle(output)
+    conv3_flat = tf.keras.layers.Flatten()(conv3)
 
-  # Layer 4
-  # [64, 512] -> [16, 1024]
-  with tf.variable_scope('downconv_4'):
-    output = tf.layers.conv1d(output, dim * 16, kernel_len, 4, padding='SAME')
-    output = batchnorm(output)
-  output = lrelu(output)
+    dense_intermediate = tf.keras.layers.Dense(filters)(conv3_flat)
+    output = tf.keras.layers.Dense(1)(dense_intermediate)
+    return output
 
-  if slice_len == 32768:
-    # Layer 5
-    # [32, 1024] -> [16, 2048]
-    with tf.variable_scope('downconv_5'):
-      output = tf.layers.conv1d(output, dim * 32, kernel_len, 2, padding='SAME')
-      output = batchnorm(output)
-    output = lrelu(output)
-  elif slice_len == 65536:
-    # Layer 5
-    # [64, 1024] -> [16, 2048]
-    with tf.variable_scope('downconv_5'):
-      output = tf.layers.conv1d(output, dim * 32, kernel_len, 4, padding='SAME')
-      output = batchnorm(output)
-    output = lrelu(output)
 
-  # Flatten
-  output = tf.reshape(output, [batch_size, -1])
-
-  # Connect to single logit
-  with tf.variable_scope('output'):
-    output = tf.layers.dense(output, 1)[:, 0]
-
-  # Don't need to aggregate batchnorm update ops like we do for the generator because we only use the discriminator for training
-
-  return output
+def DiscriminatorModel(sample_size, feature_size, r_scale, filter_dim):
+    input = tf.keras.layers.Input(shape=(sample_size, feature_size), name="input")
+    value = DiscriminatorFn(input, sample_size, r_scale, filter_dim)
+    return Model(inputs=input, outputs=value)

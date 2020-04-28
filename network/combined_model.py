@@ -14,7 +14,7 @@ import sys
 import numpy as np
 import os
 
-class GANslator():
+class GANslator:
     def __init__(self,
                  sample_size=16384,
                  feature_size=32,
@@ -30,8 +30,9 @@ class GANslator():
         self.filter_dim = filter_dim
 
         # Input shape
-        self.input_shape = tf.shape([self.sample_size])
-        self.noise_shape = tf.shape([self.z_dim])
+        self.input_shape = tf.constant([self.sample_size])
+
+        self.noise_shape = tf.constant([self.z_dim])
 
         # Loss weights
         self.lambda_cycle = 10.0                    # Cycle-consistency loss
@@ -62,22 +63,26 @@ class GANslator():
         signal_B = tf.keras.layers.Input(shape=self.input_shape)
         noise = tf.keras.layers.Input(shape=self.noise_shape)
 
-        features_A = MelSpecFeatures(signal_A)
-        features_B = MelSpecFeatures(signal_B)
+        features_A = MelSpecFeatures(self.feature_size)(signal_A)
+        features_B = MelSpecFeatures(self.feature_size)(signal_B)
 
         # Translate images to the other domain
-        fake_B = self.g_AB(features_A, noise)[:, 0]
-        fake_A = self.g_BA(features_B, noise)[:, 0]
+        fake_B = self.g_AB({"Cond_in": features_A, "Z_in": noise})
+        fake_A = self.g_BA({"Cond_in": features_B, "Z_in": noise})
         # Translate images back to original domain
-        reconstr_A = self.g_BA(fake_B, noise)[:, 0]
-        reconstr_B = self.g_AB(fake_A, noise)[:, 0]
+        reconstr_A = self.g_BA({"Cond_in": fake_B, "Z_in": noise})[:, :, 0]
+        reconstr_B = self.g_AB({"Cond_in": fake_A, "Z_in": noise})[:, :, 0]
+        print(reconstr_A.get_shape())
         # Identity mapping of images
-        img_A_id = self.g_BA(features_A, noise)[:, 0]
-        img_B_id = self.g_AB(features_B, noise)[:, 0]
+        img_A_id = self.g_BA({"Cond_in": features_A, "Z_in": noise})[:, :, 0]
+        img_B_id = self.g_AB({"Cond_in": features_B, "Z_in": noise})[:, :, 0]
+        print(reconstr_B.get_shape())
 
         # Only train the generators
         self.d_A.trainable = False
         self.d_B.trainable = False
+        self.g_AB.trainable = True
+        self.g_BA.trainable = True
 
         # Discriminators determines validity of translated images
         valid_A = self.d_A(fake_A)
@@ -109,15 +114,20 @@ class GANslator():
         signal_B = tf.keras.layers.Input(shape=self.input_shape)
         noise = tf.keras.layers.Input(shape=self.noise_shape)
 
-        features_A = MelSpecFeatures(signal_A)
-        features_B = MelSpecFeatures(signal_B)
+        features_A = MelSpecFeatures(self.feature_size)(signal_A)
+        features_B = MelSpecFeatures(self.feature_size)(signal_B)
 
-        fake_B = self.g_AB.predict(signal_A, noise)
-        fake_A = self.g_BA.predict(signal_B, noise)
+        print(features_A.get_shape())
+        # print(features_B.compute_output_shape(signal_B.get_shape()))
 
-        # Only train the generators
-        self.g_A.trainable = False
-        self.g_B.trainable = False
+        fake_B = self.g_AB({"Cond_in": features_A, "Z_in": noise})
+        fake_A = self.g_BA({"Cond_in": features_B, "Z_in": noise})
+
+        # Only train the discriminators
+        self.d_A.trainable = True
+        self.d_B.trainable = True
+        self.g_AB.trainable = False
+        self.g_BA.trainable = False
 
         # Get discriminator outputs
         d_valid_A = self.d_A(features_A)
@@ -181,9 +191,9 @@ class GANslator():
 
                 # Plot the progress
                 print(
-                    "[Epoch {:d}/{:d}] [Batch {:d}] [D loss: {:f}, acc: {:3d}%] [G loss: {:05f}, adv: {:05f}, recon: {:05f}, id: {:05f}] time: {} " \
-                    .format(epoch, epochs,
-                            batch_i,
+                    "[Epoch {:d}/{:d}] [Batch {:d}] [D loss: {:f}, acc: {:3f}%] [G loss: {:05f}, adv: {:05f}, recon: {:05f}, id: {:05f}] time: {} " \
+                    .format(int(epoch), int(epochs),
+                            int(batch_i),
                             d_loss[0], 100 * d_loss[1],
                             g_loss[0],
                             np.mean(g_loss[1:3]),
@@ -193,19 +203,19 @@ class GANslator():
 
                 # If at save interval => save generated image samples
                 if batch_i % sample_interval == 0:
-                    self.sample_images(epoch, batch_i, signals_A[0], signals_B[0], noise[0])
+                    self.sample_sounds(epoch, batch_i, signals_A[0], signals_B[0], noise[0])
 
     def sample_sounds(self, epoch, batch_i, signal_A, signal_B, noise):
         os.makedirs('audio/generated_samples', exist_ok=True)
 
         # Get fake and reconstructed outputs
-        fake_B = self.g_AB.predict(signal_A, noise)[:, 0]
-        fake_A = self.g_BA.predict(signal_B, noise)[:, 0]
+        fake_B = self.g_AB.predict({"Cond_in": signal_A, "Z_in": noise})[:, 0]
+        fake_A = self.g_BA.predict({"Cond_in": signal_B, "Z_in": noise})[:, 0]
 
-        reconstr_A = self.g_BA.predict(fake_B, noise)[:, 0]
-        reconstr_B = self.g_AB.predict(fake_A, noise)[:, 0]
+        reconstr_A = self.g_BA.predict({"Cond_in": fake_B, "Z_in": noise})[:, 0]
+        reconstr_B = self.g_AB.predict({"Cond_in": fake_A, "Z_in": noise})[:, 0]
 
-        prefix = "results/epoch_{}_batch_{}" % epoch, batch_i
+        prefix = "results/epoch_{}_batch_{}".format(epoch, batch_i)
         wav_suffix = ".wav"
         img_suffix = ".jpg"
 

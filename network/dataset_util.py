@@ -55,7 +55,13 @@ class MelSpecFeatures(tf.keras.layers.Layer):
             linear_to_mel_weight_matrix.shape[-1:]))
         exp = tf.expand_dims(x, 2)
         output = tf.keras.layers.concatenate([exp, mel_spectrograms], axis=-1)
+        # print(output.get_shape())
         return output
 
     def compute_output_shape(self, input_shape):
-        return (input_shape[0], 1 + self.num_mel_bins)
+        print(input_shape[1])
+        print(self.num_mel_bins)
+        output = tf.convert_to_tensor([-1, input_shape[1], 1 + self.num_mel_bins])
+        # tf.print(output)
+        # print(output.get_shape())
+        return output

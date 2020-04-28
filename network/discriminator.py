@@ -36,6 +36,6 @@ def DiscriminatorFn(
 
 
 def DiscriminatorModel(sample_size, feature_size, r_scale, filter_dim):
-    input = tf.keras.layers.Input(shape=(sample_size, feature_size), name="input")
+    input = tf.keras.layers.Input(shape=(sample_size, feature_size + 1), name="input")
     value = DiscriminatorFn(input, sample_size, r_scale, filter_dim)
     return Model(inputs=input, outputs=value)

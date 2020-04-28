@@ -51,7 +51,6 @@ def GeneratorFn(
     deconv2 = temporal_deconv(skip1, filters, r_scale, name="UpConv2")
     skip2 = tf.keras.layers.concatenate([deconv2, conv1], axis=2, name="Concat2")
     samples *= r_scale
-    print(tf.shape(deconv2))
     # Collapse down to a single audio channel.
     deconv3 = temporal_deconv(skip2, 1, r_scale, name="UpConv3")
     samples *= r_scale
@@ -60,7 +59,7 @@ def GeneratorFn(
     return output_plus_features
 
 def GeneratorModel(sample_size, feature_size, z_dim, r_scale, filter_dim):
-    in1 = tf.keras.layers.Input(shape=(sample_size, feature_size), name="Cond_in")
+    in1 = tf.keras.layers.Input(shape=(sample_size, feature_size + 1), name="Cond_in")
     in2 = tf.keras.layers.Input(shape=(z_dim), name="Z_in")
     value = GeneratorFn(in1, in2, sample_size, feature_size, z_dim, r_scale, filter_dim)
     model = Model(inputs=[in1, in2], outputs=value)

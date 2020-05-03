@@ -1,23 +1,34 @@
 
-Data:
-    - Get speech translation data
-        > Resolved. Using emotion dataset instead.
-        > Same principle, much easier domains and I don't have to pay for it.
+Cloud:
+    - Setup
+        > Get the cloud credit from your columbia email.
+    - Data download
+        > Download dataset onto the cloud.
+    - Training
+        > Laptop does not have the hardware necessary to train this model.
+        > I need to get to the point where I can have it run overnight and generate sample outputs.
+
+Dataset:
+    - Need to be able to read in RAVDESS data
+        > Ravdess is 48khz. It's also sampled too quickly
+
+
+Training/Saving:
+    - Saving is set up.
+    - Need to watch out for failures during training, since checkpoint
+    - Model can train
+
+Evaluation:
+    - Need metrics
+        > MOS is a potential metric.
+        > Could also do a comparison against discriminator classification, though that's more complicated.
+        > Much like generating images, this will be mostly subjective. Maybe that's ok.
 
 Network:
-    - Verify/Inspect wavegan on audio data
-        > Need a strong understanding of how wavegan works.
-        > Figure out what works and doesn't work on Tensorflow 2.1.0.
-        > Will also let me understand how to use audio input.
-    - Rewrite wavegan for TF 2.0, verify it can run on sample audio data.
-        > Almost certainly necessary.
-        > Start with one generator/discriminator.
-        > Write basic training loop and verify that it works.
     - Write attention mechanism
         > Refer to convolutional attention GAN
+        > Learned about attention. Turns out, it's very similar to a fully connected layer with many channels when used on images.
+        > The features of a single example can be enormous. If the sentence in ravdess is 4 seconds, then at 16kHz, we're
+            talking an input size of 192KB. The good news is that the convolutional network doesn't really
+            get larger with input length. It only scales with feature size.
         > Then modify the generator/discriminator with attention, possibly writing new versions.
-    - Write cyclic loss mechanism
-        > Refer to cyclegan
-        > Set up cyclic loss training loop, and verify it works.
-    - Begin iterating on training data
-        > Adjust parameters

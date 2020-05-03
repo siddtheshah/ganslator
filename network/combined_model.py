@@ -1,8 +1,8 @@
 import scipy
 import tensorflow as tf
+from tensorflow.keras.models import load_model
 import tensorflow_addons as tfa
 
-from tensorflow.keras.datasets import mnist
 from tensorflow.keras.optimizers import Adam
 import datetime
 import matplotlib.pyplot as plt
@@ -21,7 +21,6 @@ class GANslator:
                  r_scale=16,
                  z_dim=100,
                  filter_dim=64):
-
         # Store parameters for building sub-models
         self.sample_size = sample_size
         self.feature_size = feature_size
@@ -72,11 +71,11 @@ class GANslator:
         # Translate images back to original domain
         reconstr_A = self.g_BA({"Cond_in": fake_B, "Z_in": noise})[:, :, 0]
         reconstr_B = self.g_AB({"Cond_in": fake_A, "Z_in": noise})[:, :, 0]
-        print(reconstr_A.get_shape())
+        # print(reconstr_A.get_shape())
         # Identity mapping of images
         img_A_id = self.g_BA({"Cond_in": features_A, "Z_in": noise})[:, :, 0]
         img_B_id = self.g_AB({"Cond_in": features_B, "Z_in": noise})[:, :, 0]
-        print(reconstr_B.get_shape())
+        # print(reconstr_B.get_shape())
 
         # Only train the generators
         self.d_A.trainable = False
@@ -157,7 +156,20 @@ class GANslator:
     def build_discriminator(self):
         return DiscriminatorModel(self.sample_size, self.feature_size, self.r_scale, self.z_dim)
 
-    def train(self, dataset, epochs, batch_size=1, sample_interval=50):
+    def save_to_path(self, model_path):
+        generator_path = os.path.join(model_path, "generator.h5")
+        self.g_combined.save_weights(generator_path, True)
+
+        discriminator_path = os.path.join(model_path, "discriminator.h5")
+        self.d_combined.save_weights(discriminator_path, True)
+
+    def load_from_path(self, model_path):
+        generator_path = os.path.join(model_path, "generator.h5")
+        self.g_combined.load_weights(generator_path)
+        discriminator_path = os.path.join(model_path, "discriminator.h5")
+        self.d_combined.load_weights(discriminator_path)
+
+    def train(self, dataset, epochs, batch_size=1, save_interval=50, save_path=''):
 
         start_time = datetime.datetime.now()
 
@@ -185,7 +197,7 @@ class GANslator:
                 g_loss = self.g_combined.train_on_batch([signals_A, signals_B, noise],
                                                         [valid, valid,
                                                         signals_A, signals_B,
-                                                        signals_A, signals_B])
+                                                        signals_A, signals_B],)
 
                 elapsed_time = datetime.datetime.now() - start_time
 
@@ -201,9 +213,10 @@ class GANslator:
                             np.mean(g_loss[5:6]),
                             elapsed_time))
 
-                # If at save interval => save generated image samples
-                if batch_i % sample_interval == 0:
-                    self.sample_sounds(epoch, batch_i, signals_A[0], signals_B[0], noise[0])
+            # If at save interval => save generated image samples
+            if save_path and epoch % save_interval == 0:
+                self.sample_sounds(epoch, batch_i, signals_A[0], signals_B[0], noise[0])
+                self.save_to_path(save_path)
 
     def sample_sounds(self, epoch, batch_i, signal_A, signal_B, noise):
         os.makedirs('audio/generated_samples', exist_ok=True)
@@ -252,5 +265,3 @@ class GANslator:
 
 if __name__ == '__main__':
     gan = GANslator()
-
-    gan.train(batch_size=1, epochs=200, sample_interval=200)

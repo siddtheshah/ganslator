@@ -4,6 +4,8 @@ import os
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
+
+
 """
 Creates a dataset using .wav or .mp3 files in a given directory. Remember to call .batch() to batch this dataset.
 Input:
@@ -12,7 +14,7 @@ Output:
     a tf.data.Dataset of audio tensors.
 """
 
-def create_dataset_from_io_spec(input_spec, output_spec):
+def create_unconditioned_dataset_from_io_spec(input_spec, output_spec):
     input_fs = tf.data.Dataset.list_files(input_spec)
     output_fs = tf.data.Dataset.list_files(output_spec)
     input_batch = input_fs.shuffle(buffer_size=1024).map(load_audio, num_parallel_calls=AUTOTUNE)

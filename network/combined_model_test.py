@@ -13,7 +13,7 @@ class CombinedModelTest(tf.test.TestCase):
 
         path = Path(__file__).parent
         ganslator = combined_model.GANslator()
-        dataset = ds_util.create_dataset_from_io_spec(os.path.join(path, "testing/more_testdata/*"), os.path.join(path, "testing/more_testdata/*"))
+        dataset = ds_util.create_unconditioned_dataset_from_io_spec(os.path.join(path, "testing/more_testdata/*"), os.path.join(path, "testing/more_testdata/*"))
         ganslator.train(dataset, 2, save_interval=1)
         model_save_path = os.path.join(path, "testing")
         ganslator.save_to_path(model_save_path)

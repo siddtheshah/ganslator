@@ -10,11 +10,13 @@ parser = argparse.ArgumentParser(description='Arguments for training/eval.')
 parser.add_argument('--train', default=False, action='store_true', help='Train a new model')
 parser.add_argument('--eval', default=False, action='store_true', help='Run eval on the model')
 parser.add_argument('--model_name', help='Specify a run name. (Required)', action='store')
-parser.add_argument('--overwrite', default=False,  help='Whether to overwrite existing models with the same name.', action='store')
+parser.add_argument('--overwrite', default=False, help='Whether to overwrite existing models with the same name.',
+                    action='store')
 args = parser.parse_args()
 
-def get_dataset_from_args():
 
+def get_dataset_from_args():
+    return
 
 
 def run_training(configs, model_name):
@@ -43,7 +45,6 @@ def main():
         print("No model name specified. Aborted.")
         return
 
-
     with open('config.json') as config_file:
         configs = json.load(config_file)
 
@@ -56,6 +57,7 @@ def main():
 
         if args.eval:
             eval_model(configs, args.model_name)
+
 
 if __name__ == "__main__":
     main()

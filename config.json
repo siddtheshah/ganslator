@@ -5,9 +5,9 @@
   "epochs": 15,
   "save_interval": 1,
   "batch_size": 1,
-  "storage_dir": "I:\\ml_storage\\summarizer",
-  "data_dir": "I:\\ml_storage\\movie_poster_images",
-  "synth_dir": "I:\\ml_storage\\movie_trailers",
+  "storage_dir": "models",
+  "data_dir": "data",
+  "synth_dir": "results",
   "learning_rate": 2e-3,
   "use_gpu": true
 }

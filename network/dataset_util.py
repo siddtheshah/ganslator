@@ -4,6 +4,30 @@ import os
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
+def is_matching_ravdess_emotion_file(file_path, emotion):
+    base = os.path.basename(file_path)
+    name, _ = os.path.splitext(base)
+    num_strs = name.split('-')
+    nums = [int(x) for x in num_strs]
+    if nums[1] == 2:  # Is singing
+        return False
+    if nums[3] == 2:  # Is high intensity
+        return False
+    if nums[2] == emotion:
+        return False
+    return True
+
+
+
+"""
+Creates a Dataset from the standard ravdess directory structure. 
+Input:
+    a path to the top level ravdess directory
+"""
+
+def create_dataset_from_ravdess(ravdess_dir, emotion_input=0, emotion_output=3):
+    files = tf.data.Dataset.list_files(ravdess_dir + '*')
+    input_fs = files.map()
 
 
 """

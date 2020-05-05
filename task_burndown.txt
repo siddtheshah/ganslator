@@ -22,7 +22,8 @@ Evaluation:
     - Need metrics
         > MOS is a potential metric.
         > Could also do a comparison against discriminator classification, though that's more complicated.
-        > Much like generating images, this will be mostly subjective. Maybe that's ok.
+        > Much like generating images, this will be mostly subjective.
+        > Could potentially run text to speech to verify that the output words are roughly the same.
 
 Network:
     - Write attention mechanism

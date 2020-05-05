@@ -5,7 +5,7 @@ Originally intended for language translation problems, it is currently being use
 emotion transformation.
 
 ## Dependencies
-1. Tensorflow 2.0
+1. Tensorflow 2.1
 2. Python 3.5
 
 ## Dataset Download

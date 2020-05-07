@@ -1,7 +1,5 @@
 import tensorflow as tf
 from tensorflow.keras.models import Model
-import numpy as np
-import tensorflow_addons as tfa
 from network.conv import *
 from network.dataset_util import *
 

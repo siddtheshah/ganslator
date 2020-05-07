@@ -1,8 +1,3 @@
-import scipy
-import tensorflow as tf
-from tensorflow.keras.models import load_model
-import tensorflow_addons as tfa
-
 from tensorflow.keras.optimizers import Adam
 import datetime
 import matplotlib.pyplot as plt
@@ -10,7 +5,6 @@ import matplotlib.pyplot as plt
 from network.discriminator import *
 from network.generator import *
 
-import sys
 import numpy as np
 import os
 

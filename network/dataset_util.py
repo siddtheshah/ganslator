@@ -3,6 +3,7 @@ import os
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
+@tf.function
 def is_matching_ravdess_emotion_file(file_path, emotion):
     base = os.path.basename(file_path)
     name, _ = os.path.splitext(base)
@@ -12,7 +13,7 @@ def is_matching_ravdess_emotion_file(file_path, emotion):
         return False
     if nums[3] == 2:  # Is high intensity
         return False
-    if nums[2] == emotion:
+    if nums[2] != emotion:
         return False
     return True
 
@@ -23,11 +24,13 @@ Input:
 """
 
 def create_dataset_from_ravdess(ravdess_dir, emotion_input=0, emotion_output=3):
-    files = tf.data.Dataset.list_files(ravdess_dir + '*')
-    input_fs = files.map(lambda x : is_matching_ravdess_emotion_file(x, emotion_input))
-    output_fs = files.map(lambda x : is_matching_ravdess_emotion_file(x, emotion_output))
-    input_wav = input_fs.map(load_audio, num_parallel_calls=AUTOTUNE)
-    output_wav = output_fs.map(load_audio,num_parallel_calls=AUTOTUNE)
+    files = [f for f in os.listdir(ravdess_dir) if os.path.isfile(os.path.join(ravdess_dir, f))]
+    input_fs = [x for x in files if is_matching_ravdess_emotion_file(x, emotion_input)]
+    output_fs = [x for x in files if is_matching_ravdess_emotion_file(x, emotion_output)]
+    input_ds = tf.data.Dataset.from_tensor_slices(input_fs)
+    output_ds = tf.data.Dataset.from_tensor_slices(output_fs)
+    input_wav = input_ds.map(load_audio, num_parallel_calls=AUTOTUNE)
+    output_wav = output_ds.map(load_audio, num_parallel_calls=AUTOTUNE)
     return tf.data.Dataset.zip((input_wav, output_wav))
 
 """

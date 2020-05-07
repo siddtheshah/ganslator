@@ -27,7 +27,8 @@ def get_dataset_from_args(configs):
 
 def run_training(configs, model_name):
     model = cm.GANslator(r_scale=configs['r_scale'], feature_size=configs['mel_bins'], filter_dim=configs['filter_dim'])
-
+    dataset = get_dataset_from_args(configs)
+    model.train(dataset, configs['epochs'], configs['batch_size'], configs['save_interval'], configs['synth_dir'])
     model.save_to_path(os.path.join(configs["storage_dir"], model_name))
 
 

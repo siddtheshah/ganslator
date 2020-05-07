@@ -3,3 +3,4 @@ network/testing/test*
 network/testing/discriminator*
 network/testing/generator*
 scratch*
+venv*

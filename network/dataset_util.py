@@ -1,5 +1,4 @@
 import tensorflow as tf
-import tensorflow_io as tfio
 import os
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
@@ -17,8 +16,6 @@ def is_matching_ravdess_emotion_file(file_path, emotion):
         return False
     return True
 
-
-
 """
 Creates a Dataset from the standard ravdess directory structure. 
 Input:
@@ -27,8 +24,11 @@ Input:
 
 def create_dataset_from_ravdess(ravdess_dir, emotion_input=0, emotion_output=3):
     files = tf.data.Dataset.list_files(ravdess_dir + '*')
-    input_fs = files.map()
-
+    input_fs = files.map(lambda x : is_matching_ravdess_emotion_file(x, emotion_input))
+    output_fs = files.map(lambda x : is_matching_ravdess_emotion_file(x, emotion_output))
+    input_wav = input_fs.map(load_audio, num_parallel_calls=AUTOTUNE)
+    output_wav = output_fs.map(load_audio,num_parallel_calls=AUTOTUNE)
+    return tf.data.Dataset.zip((input_wav, output_wav))
 
 """
 Creates a dataset using .wav or .mp3 files in a given directory. Remember to call .batch() to batch this dataset.

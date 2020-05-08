@@ -57,20 +57,11 @@ def create_unconditioned_dataset_from_io_spec(input_spec, output_spec, samples):
 
     return tf.data.Dataset.zip((input_batch, output_batch))
 
-<<<<<<< Updated upstream
-def load_audio(file_path):
-    tf.print(file_path)
-    tf.print("FILEPATH")
-    audio = tf.io.read_file(file_path)
-    tf.print(tf.shape(audio))
-    audio, sr = tf.audio.decode_wav(audio, desired_channels=1, desired_samples=262144)
-=======
 def load_audio_fn(samples):
     return lambda x: load_audio(x, samples)
 
 def load_audio(file_path, samples):
     audio = tf.io.read_file(file_path)
     audio, sr = tf.audio.decode_wav(audio, desired_channels=1, desired_samples=samples)
->>>>>>> Stashed changes
     audio = tf.squeeze(audio)
     return audio

@@ -52,9 +52,9 @@ class GANslator:
         #-------------------------
 
         # Input images from both domains
-        signal_A = tf.keras.layers.Input(shape=self.input_shape)
-        signal_B = tf.keras.layers.Input(shape=self.input_shape)
-        noise = tf.keras.layers.Input(shape=self.noise_shape)
+        signal_A = tf.keras.layers.Input(shape=self.input_shape, name="signal_A")
+        signal_B = tf.keras.layers.Input(shape=self.input_shape, name="signal_B")
+        noise = tf.keras.layers.Input(shape=self.noise_shape, name="noise")
 
         features_A = MelSpecFeatures(self.feature_size)(signal_A)
         features_B = MelSpecFeatures(self.feature_size)(signal_B)
@@ -219,6 +219,15 @@ class GANslator:
         prefix = "results/epoch_{}_batch_{}".format(epoch, batch_i)
         wav_suffix = ".wav"
         img_suffix = ".jpg"
+
+        features_A = MelSpecFeatures(self.feature_size)(signals_A)
+        features_B = MelSpecFeatures(self.feature_size)(signals_B)
+
+        fake_B = self.g_AB.predict({"Cond_in": features_A, "Z_in": noise})
+        fake_A = self.g_BA.predict({"Cond_in": features_B, "Z_in": noise})
+        # Translate images back to original domain
+        reconstr_A = self.g_BA.predict({"Cond_in": fake_B, "Z_in": noise})
+        reconstr_B = self.g_AB.predict({"Cond_in": fake_A, "Z_in": noise})
 
         plt.figure()
         plt.plot(signals_A[0].numpy())

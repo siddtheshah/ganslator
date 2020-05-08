@@ -1,4 +1,6 @@
+models*
 data*
+resuls*
 network/testing/test*
 network/testing/discriminator*
 network/testing/generator*

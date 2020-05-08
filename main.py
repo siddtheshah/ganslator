@@ -12,7 +12,7 @@ parser.add_argument('--train', default=False, action='store_true', help='Train a
 parser.add_argument('--eval', default=False, action='store_true', help='Run eval on the model')
 parser.add_argument('--model_name', help='Specify a run name. (Required)', action='store')
 parser.add_argument('--overwrite', default=False, help='Whether to overwrite existing models with the same name.',
-                    action='store')
+                    action='store_true')
 parser.add_argument('--dataset', default='ravdess', help='Which dataset to use')
 args = parser.parse_args()
 
@@ -28,8 +28,11 @@ def get_dataset_from_args(configs):
 def run_training(configs, model_name):
     model = cm.GANslator(sample_size=configs['samples'], r_scale=configs['r_scale'], feature_size=configs['mel_bins'], filter_dim=configs['filter_dim'])
     dataset = get_dataset_from_args(configs)
+    model_path = os.path.join(configs["storage_dir"], model_name)
+    if not os.path.isdir(model_path):
+        os.mkdir(model_path)
     model.train(dataset, configs['epochs'], configs['batch_size'], configs['save_interval'], configs['synth_dir'])
-    model.save_to_path(os.path.join(configs["storage_dir"], model_name))
+    model.save_to_path(model_path)
 
 
 def train_model(configs, model_name):

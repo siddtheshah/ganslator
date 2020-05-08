@@ -209,14 +209,13 @@ class GANslator:
 
             # If at save interval => save generated image samples
             if save_path and epoch % save_interval == 0:
-                self.sample_sounds(epoch, batch_i, signals_A, signals_B, noise)
+                self.sample_sounds(save_path, epoch, batch_i, signals_A, signals_B, noise)
                 self.save_to_path(save_path)
 
-    def sample_sounds(self, epoch, batch_i, signals_A, signals_B, noise):
-        os.makedirs('audio/generated_samples', exist_ok=True)
+    def sample_sounds(self, save_path, epoch, batch_i, signals_A, signals_B, noise):
         # Get fake and reconstructed outputs
-        
-        prefix = "results/epoch_{}_batch_{}".format(epoch, batch_i)
+        model_name = os.path.basename(save_path)
+        prefix = os.path.join(model_name, "epoch_{}_batch_{}_".format(epoch, batch_i))
         wav_suffix = ".wav"
         img_suffix = ".jpg"
 
@@ -238,26 +237,26 @@ class GANslator:
         plt.savefig(prefix + "signal_B" + img_suffix)
 
         plt.clf()
-        plt.plot(fake_A[0].numpy())
+        plt.plot(fake_A[0, :, 0])
         plt.savefig(prefix + "fake_A" + img_suffix)
 
         plt.clf()
-        plt.plot(fake_B[0].numpy())
+        plt.plot(fake_B[0, :, 0])
         plt.savefig(prefix + "fake_B" + img_suffix)
 
         plt.clf()
-        plt.plot(reconstr_A[0].numpy())
+        plt.plot(reconstr_A[0, :, 0])
         plt.savefig(prefix + "reconstr_A" + img_suffix)
 
         plt.clf()
-        plt.plot(reconstr_B[0].numpy())
+        plt.plot(reconstr_B[0, :, 0])
         plt.savefig(prefix + "reconstr_B" + img_suffix)
 
         # Save some sample sounds
-        fake_A_encode = tf.audio.encode_wav(fake_A)
+        fake_A_encode = tf.audio.encode_wav(tf.expand_dims(fake_A[0, :, 0], 1), sample_rate=22000)
         tf.io.write_file(prefix + "fake_A" + wav_suffix, fake_A_encode)
 
-        fake_B_encode = tf.audio.encode_wav(fake_B)
+        fake_B_encode = tf.audio.encode_wav(tf.expand_dims(fake_B[0, :,0], 1), sample_rate=22000)
         tf.io.write_file(prefix + "fake_B" + wav_suffix, fake_B_encode)
 
 if __name__ == '__main__':

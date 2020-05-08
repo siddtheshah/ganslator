@@ -209,45 +209,39 @@ class GANslator:
 
             # If at save interval => save generated image samples
             if save_path and epoch % save_interval == 0:
-                self.sample_sounds(epoch, batch_i, signals_A[0], signals_B[0], noise[0])
+                self.sample_sounds(epoch, batch_i, signals_A, signals_B, noise)
                 self.save_to_path(save_path)
 
-    def sample_sounds(self, epoch, batch_i, signal_A, signal_B, noise):
+    def sample_sounds(self, epoch, batch_i, signals_A, signals_B, noise):
         os.makedirs('audio/generated_samples', exist_ok=True)
-
         # Get fake and reconstructed outputs
-        fake_B = self.g_AB.predict({"Cond_in": signal_A, "Z_in": noise})[:, 0]
-        fake_A = self.g_BA.predict({"Cond_in": signal_B, "Z_in": noise})[:, 0]
-
-        reconstr_A = self.g_BA.predict({"Cond_in": fake_B, "Z_in": noise})[:, 0]
-        reconstr_B = self.g_AB.predict({"Cond_in": fake_A, "Z_in": noise})[:, 0]
-
+        
         prefix = "results/epoch_{}_batch_{}".format(epoch, batch_i)
         wav_suffix = ".wav"
         img_suffix = ".jpg"
 
         plt.figure()
-        plt.plot(signal_A.numpy())
+        plt.plot(signals_A[0].numpy())
         plt.savefig(prefix + "signal_A" + img_suffix)
 
         plt.clf()
-        plt.plot(signal_B.numpy())
+        plt.plot(signals_B[0].numpy())
         plt.savefig(prefix + "signal_B" + img_suffix)
 
         plt.clf()
-        plt.plot(fake_A.numpy())
+        plt.plot(fake_A[0].numpy())
         plt.savefig(prefix + "fake_A" + img_suffix)
 
         plt.clf()
-        plt.plot(fake_B.numpy())
+        plt.plot(fake_B[0].numpy())
         plt.savefig(prefix + "fake_B" + img_suffix)
 
         plt.clf()
-        plt.plot(reconstr_A.numpy())
+        plt.plot(reconstr_A[0].numpy())
         plt.savefig(prefix + "reconstr_A" + img_suffix)
 
         plt.clf()
-        plt.plot(reconstr_B.numpy())
+        plt.plot(reconstr_B[0].numpy())
         plt.savefig(prefix + "reconstr_B" + img_suffix)
 
         # Save some sample sounds

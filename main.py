@@ -21,12 +21,12 @@ def get_dataset_from_args(configs):
     if args.dataset == 'ravdess':
         if not os.path.isdir(os.path.join(configs['data_dir'], 'ravdess')):
             raise FileNotFoundError("Could not find ravdess path. Aborted")
-        return ds_util.create_dataset_from_ravdess(os.path.join(configs['data_dir'], 'ravdess'))
+        return ds_util.create_dataset_from_ravdess(os.path.join(configs['data_dir'], 'ravdess'), samples=configs['samples'])
 
 
 
 def run_training(configs, model_name):
-    model = cm.GANslator(sample_size=262144, r_scale=configs['r_scale'], feature_size=configs['mel_bins'], filter_dim=configs['filter_dim'])
+    model = cm.GANslator(sample_size=configs['samples'], r_scale=configs['r_scale'], feature_size=configs['mel_bins'], filter_dim=configs['filter_dim'])
     dataset = get_dataset_from_args(configs)
     model.train(dataset, configs['epochs'], configs['batch_size'], configs['save_interval'], configs['synth_dir'])
     model.save_to_path(os.path.join(configs["storage_dir"], model_name))
@@ -43,7 +43,7 @@ def train_model(configs, model_name):
 
 
 def eval_model(configs, model_name):
-    model = cm.GANslator(sample_size=262144, r_scale=configs['r_scale'], feature_size=configs['mel_bins'], filter_dim=configs['filter_dim'])
+    model = cm.GANslator(sample_size=configs['samples'], r_scale=configs['r_scale'], feature_size=configs['mel_bins'], filter_dim=configs['filter_dim'])
     model.load_from_path(os.path.join(configs["storage_dir"], model_name))
 
 

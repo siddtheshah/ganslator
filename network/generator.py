@@ -12,7 +12,7 @@ def GeneratorFn(
         z_dim,
         r_scale,
         conv_size=32,
-        filters=128):
+        filters=64):
 
 
     # First, take the input and compress it down into a [batch_size, 100] vector, equivalent size to noise vec.

@@ -9,8 +9,8 @@ class DatasetTest(tf.test.TestCase):
         super(DatasetTest, self).setUp()
 
     def testDatasetOutput(self):
-        path = Path(__file__).parent
-        ds = ds_util.create_unconditioned_dataset_from_io_spec(os.path.join(path, "testing/testdata*"), os.path.join(path, "testing/testdata*")).batch(1)
+        path = str(Path(__file__).parent)
+        ds = ds_util.create_unconditioned_dataset_from_io_spec(os.path.join(path, "testing","testdata*"), os.path.join(path, "testing", "testdata*")).batch(1)
 
         iter = ds.__iter__()
         example = iter.get_next()

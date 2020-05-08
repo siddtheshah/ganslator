@@ -1,9 +1,9 @@
 import tensorflow as tf
 import os
+import glob
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
-@tf.function
 def is_matching_ravdess_emotion_file(file_path, emotion):
     base = os.path.basename(file_path)
     name, _ = os.path.splitext(base)
@@ -23,14 +23,23 @@ Input:
     a path to the top level ravdess directory
 """
 
-def create_dataset_from_ravdess(ravdess_dir, emotion_input=0, emotion_output=3):
-    files = [f for f in os.listdir(ravdess_dir) if os.path.isfile(os.path.join(ravdess_dir, f))]
+def create_dataset_from_ravdess(ravdess_dir, emotion_input=1, emotion_output=3):
+    # print(ravdess_dir)
+    glob_pattern = os.path.join(ravdess_dir, "**")
+    # print(glob_pattern)
+    globbed = glob.glob(glob_pattern, recursive=True)
+    # print(globbed)
+    files = [f for f in globbed  if os.path.isfile(f)]
+    # print(files)
     input_fs = [x for x in files if is_matching_ravdess_emotion_file(x, emotion_input)]
     output_fs = [x for x in files if is_matching_ravdess_emotion_file(x, emotion_output)]
+    # print(input_fs)
+    # print(output_fs)
     input_ds = tf.data.Dataset.from_tensor_slices(input_fs)
     output_ds = tf.data.Dataset.from_tensor_slices(output_fs)
     input_wav = input_ds.map(load_audio, num_parallel_calls=AUTOTUNE)
     output_wav = output_ds.map(load_audio, num_parallel_calls=AUTOTUNE)
+    # tf.print(input_wav)
     return tf.data.Dataset.zip((input_wav, output_wav))
 
 """
@@ -51,7 +60,10 @@ def create_unconditioned_dataset_from_io_spec(input_spec, output_spec):
     return tf.data.Dataset.zip((input_batch, output_batch))
 
 def load_audio(file_path):
+    tf.print(file_path)
+    tf.print("FILEPATH")
     audio = tf.io.read_file(file_path)
-    audio, sr = tf.audio.decode_wav(audio, desired_channels=1, desired_samples=16384)
+    tf.print(tf.shape(audio))
+    audio, sr = tf.audio.decode_wav(audio, desired_channels=1, desired_samples=262144)
     audio = tf.squeeze(audio)
     return audio

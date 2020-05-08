@@ -4,13 +4,15 @@ import numpy as np
 import os
 from pathlib import Path
 
+
 class DatasetTest(tf.test.TestCase):
     def setUp(self):
         super(DatasetTest, self).setUp()
 
     def testDatasetOutput(self):
         path = str(Path(__file__).parent)
-        ds = ds_util.create_unconditioned_dataset_from_io_spec(os.path.join(path, "testing","testdata*"), os.path.join(path, "testing", "testdata*")).batch(1)
+        ds = ds_util.create_unconditioned_dataset_from_io_spec(os.path.join(path, "testing/testdata*"),
+                                                               os.path.join(path, "testing/testdata*"), 16384).batch(1)
 
         iter = ds.__iter__()
         example = iter.get_next()

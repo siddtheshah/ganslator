@@ -33,8 +33,8 @@ def create_dataset_from_ravdess(ravdess_dir, emotion_input=1, emotion_output=3, 
     # files = ["fake.wav", "faker.wav"]
     input_fs = [x for x in files if is_matching_ravdess_emotion_file(x, emotion_input)]
     output_fs = [x for x in files if is_matching_ravdess_emotion_file(x, emotion_output)]
-    input_fs = ["network/testing/testdata.wav"]
-    output_fs = ["network/testing/testdata.wav"]
+    # input_fs = ["network/testing/testdata.wav"]
+    # output_fs = ["network/testing/testdata.wav"]
     # print(input_fs)
     # print(output_fs)
     input_ds = tf.data.Dataset.from_tensor_slices(input_fs)
@@ -64,9 +64,9 @@ def load_audio_fn(samples):
     return lambda x: load_audio(x, samples)
 
 def load_audio(file_path, samples):
-    tf.print(file_path)
+    # tf.print(file_path)
     audio = tf.io.read_file(file_path)
-    tf.print(tf.shape(audio))
+    # tf.print(tf.shape(audio))
     audio, sr = tf.audio.decode_wav(audio, desired_channels=1, desired_samples=samples)
     audio = tf.squeeze(audio)
     return audio

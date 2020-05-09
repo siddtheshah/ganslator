@@ -31,7 +31,8 @@ class GANslator:
         self.lambda_cycle = 10.0                    # Cycle-consistency loss
         self.lambda_id = 0.1 * self.lambda_cycle    # Identity loss
 
-        self.optimizer = Adam(0.0002, 0.5)
+        self.g_optimizer = Adam(0.0001, 0.5)
+        self.d_optimizer = Adam(0.0004, 0.5)
 
         # Build the generators
         self.g_AB = self.build_generator()
@@ -92,7 +93,7 @@ class GANslator:
                             loss_weights=[1, 1,
                                             self.lambda_cycle, self.lambda_cycle,
                                             self.lambda_id, self.lambda_id],
-                            optimizer=self.optimizer)
+                            optimizer=self.g_optimizer)
 
         return combined
 
@@ -129,7 +130,7 @@ class GANslator:
         d_fake_B = self.d_B(fake_B)
 
         combined = Model(inputs=[signal_A, signal_B, noise], outputs=[d_valid_A, d_valid_B, d_fake_A, d_fake_B])
-        combined.compile(loss='mse', optimizer=self.optimizer, metrics=['accuracy'])
+        combined.compile(loss='mse', optimizer=self.d_optimizer, metrics=['accuracy'])
 
         return combined
         #
@@ -148,7 +149,7 @@ class GANslator:
         return GeneratorModel(self.sample_size, self.feature_size, self.z_dim, self.r_scale, self.filter_dim)
 
     def build_discriminator(self):
-        return DiscriminatorModel(self.sample_size, self.feature_size, self.r_scale, self.z_dim)
+        return DiscriminatorModel(self.sample_size, self.feature_size, self.r_scale, 2 * self.filter_dim)
 
     def save_to_path(self, model_path):
         generator_path = os.path.join(model_path, "generator.h5")

@@ -25,6 +25,18 @@ class DatasetTest(tf.test.TestCase):
         self.assertAllEqual(expected_input_shape, tf.shape(input))
         self.assertAllEqual(expected_input_shape, tf.shape(output))
 
+    def testChunkedAudio(self):
+        path = str(Path(__file__).parent)
+        fn = ds_util.audio_chunking_fn(chunk_size=1024, misalignment=200, starting_offset=1000)
+        audio_chunks = fn(os.path.join(path, "testing", "more_testdata", "Clap_00006.wav"))
+        first = audio_chunks[0]
+        second = audio_chunks[1]
+
+        expected_input_shape = np.array([1024])
+        # Make sure the dataset is reading data correctly.
+        self.assertAllEqual(expected_input_shape, tf.shape(first))
+        self.assertAllEqual(expected_input_shape, tf.shape(second))
+
 
 if __name__ == '__main__':
     tf.test.main()

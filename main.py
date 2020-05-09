@@ -13,7 +13,7 @@ parser.add_argument('--eval', default=False, action='store_true', help='Run eval
 parser.add_argument('--model_name', help='Specify a run name. (Required)', action='store')
 parser.add_argument('--overwrite', default=False, help='Whether to overwrite existing models with the same name.',
                     action='store_true')
-parser.add_argument('--dataset', default='ravdess', help='Which dataset to use')
+parser.add_argument('--dataset', default='ravdess_chunked', help='Which dataset to use')
 args = parser.parse_args()
 
 
@@ -21,7 +21,11 @@ def get_dataset_from_args(configs):
     if args.dataset == 'ravdess':
         if not os.path.isdir(os.path.join(configs['data_dir'], 'ravdess')):
             raise FileNotFoundError("Could not find ravdess path. Aborted")
-        return ds_util.create_dataset_from_ravdess(os.path.join(configs['data_dir'], 'ravdess'), samples=configs['samples'])
+        return ds_util.basic_ravdess(os.path.join(configs['data_dir'], 'ravdess'), samples=configs['samples'])
+    if args.dataset == 'ravdess_chunked':
+        if not os.path.isdir(os.path.join(configs['data_dir'], 'ravdess')):
+            raise FileNotFoundError("Could not find ravdess path. Aborted")
+        return ds_util.chunked_ravdess(os.path.join(configs['data_dir'], 'ravdess'), chunk_size=configs['samples'], misalignment=200, starting_offset=10000)
 
 
 

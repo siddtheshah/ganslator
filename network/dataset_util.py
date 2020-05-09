@@ -4,26 +4,20 @@ import glob
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
-def is_matching_ravdess_emotion_file(file_path, emotion):
-    base = os.path.basename(file_path)
-    name, _ = os.path.splitext(base)
-    num_strs = name.split('-')
-    nums = [int(x) for x in num_strs]
-    if nums[1] == 2:  # Is singing
-        return False
-    if nums[3] == 2:  # Is high intensity
-        return False
-    if nums[2] != emotion:
-        return False
-    return True
+def collect_matching_ravdess_files(ravdess_dir, emotion_input, emotion_output):
+    def is_matching_ravdess_emotion_file(file_path, emotion):
+        base = os.path.basename(file_path)
+        name, _ = os.path.splitext(base)
+        num_strs = name.split('-')
+        nums = [int(x) for x in num_strs]
+        if nums[1] == 2:  # Is singing
+            return False
+        if nums[3] == 2:  # Is high intensity
+            return False
+        if nums[2] != emotion:
+            return False
+        return True
 
-"""
-Creates a Dataset from the standard ravdess directory structure. 
-Input:
-    a path to the top level ravdess directory
-"""
-
-def create_dataset_from_ravdess(ravdess_dir, emotion_input=1, emotion_output=3, samples=4096):
     # print(ravdess_dir)
     glob_pattern = os.path.join(ravdess_dir, "**")
     # print(glob_pattern)
@@ -39,8 +33,24 @@ def create_dataset_from_ravdess(ravdess_dir, emotion_input=1, emotion_output=3, 
     # print(output_fs)
     input_ds = tf.data.Dataset.from_tensor_slices(input_fs)
     output_ds = tf.data.Dataset.from_tensor_slices(output_fs)
+    return input_ds, output_ds
+
+"""
+Creates a Dataset from the standard ravdess directory structure. 
+Input:
+    a path to the top level ravdess directory
+"""
+
+def basic_ravdess(ravdess_dir, samples, emotion_input=1, emotion_output=3):
+    input_ds, output_ds = collect_matching_ravdess_files(ravdess_dir, emotion_input, emotion_output)
     input_wav = input_ds.map(load_audio_fn(samples), num_parallel_calls=AUTOTUNE)
     output_wav = output_ds.map(load_audio_fn(samples), num_parallel_calls=AUTOTUNE)
+    return tf.data.Dataset.zip((input_wav, output_wav))
+
+def chunked_ravdess(ravdess_dir, chunk_size, misalignment, starting_offset, emotion_input=1, emotion_output=3):
+    input_ds, output_ds = collect_matching_ravdess_files(ravdess_dir, emotion_input, emotion_output)
+    input_wav = input_ds.flat_map(audio_chunking_fn(chunk_size, misalignment, starting_offset))
+    output_wav = output_ds.flat_map(audio_chunking_fn(chunk_size, misalignment, starting_offset))
     return tf.data.Dataset.zip((input_wav, output_wav))
 
 """
@@ -70,3 +80,24 @@ def load_audio(file_path, samples):
     audio, sr = tf.audio.decode_wav(audio, desired_channels=1, desired_samples=samples)
     audio = tf.squeeze(audio)
     return audio
+
+# Misalignment should be specified as a layer, but that would require reading in an unchunked tensor
+# into the model itself. We instead do it at the DS level.
+def audio_chunking_fn(chunk_size, misalignment, starting_offset):
+    return lambda x: load_chunked_audio(x, chunk_size, misalignment, starting_offset)
+
+def load_chunked_audio(file_path, chunk_size, misalignment, starting_offset):
+    audio = tf.io.read_file(file_path)
+    audio, sr = tf.audio.decode_wav(audio, desired_channels=1, desired_samples=-1)
+    audio = tf.squeeze(audio)
+    audio_size = tf.shape(audio)[0]
+    num_samples = audio_size - starting_offset - misalignment*10
+    num_chunks = tf.cast(num_samples / chunk_size, tf.int32)
+    r = tf.random.normal([1])
+    shift = tf.cast(misalignment * r, tf.int32)
+    start = starting_offset + shift
+    size = tf.convert_to_tensor(num_chunks * chunk_size)
+    audio_slice = tf.slice(audio, start, [size])
+    rs = tf.reshape(audio_slice, [-1, chunk_size])
+    return tf.unstack(rs)
+

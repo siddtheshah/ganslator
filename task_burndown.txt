@@ -1,13 +1,3 @@
-
-Cloud:
-    - Setup
-
-Dataset:
-    - Need to be able to read in RAVDESS data
-        > Ravdess is 48khz. It's sampled far too quickly.
-        > Shell script in place to handle that. We can now train on ravdess, in theory.
-
-
 Training/Saving:
     - Model trains, saves, and exports stuff. Need to check exported materials.
 
@@ -17,8 +7,19 @@ Evaluation:
         > Could also do a comparison against discriminator classification, though that's more complicated.
         > Much like generating images, this will be mostly subjective.
         > Could potentially run text to speech to verify that the output words are roughly the same.
+    - Inception Score
+        > Wavegan used inception score as an evaluation metric. I should be able to adapt their script to score
+        the ganslator outputs.
 
 Network:
     - Write attention mechanism
         > This is pretty much a no-go. There's simply way too much memory required to do attention.
-        
+        > Even with resampling, we're talking about 65536 samples per instance. With 32 mel bins, we
+        max out at about 16384 samples. If we reduce the mel bins, we can possibly do more samples though.
+        > We can also create a "sliced" dataset. However, to do it properly, I would need word alignments.
+        This will require more work than I can do within this week.
+        > Word alignments can possibly be obtained through STT. But I'd need to run it on all my .wav's and
+        then read in the segmentation data during dataset construction.
+        > Instead, it would be easy to just pick 16384 consecutive samples out of the wave forms and use
+        them as samples. Maybe add some alignment noise, to make it more robust.
+        > Then, we just predict four chunks in order.

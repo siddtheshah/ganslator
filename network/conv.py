@@ -89,4 +89,3 @@ class MelSpecFeatures(tf.keras.layers.Layer):
         # print(output.get_shape())
         return output
 
-# Try image transformer layers.

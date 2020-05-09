@@ -168,8 +168,8 @@ class GANslator:
         start_time = datetime.datetime.now()
 
         # Adversarial loss ground truths
-        valid = np.ones(batch_size)
-        fake = np.zeros(batch_size)
+        valid = np.ones(batch_size)*0.98
+        fake = np.ones(batch_size)*0.02
 
         for epoch in range(epochs):
             for batch_i, (signals_A, signals_B) in enumerate(dataset.batch(batch_size)):
@@ -178,8 +178,10 @@ class GANslator:
                 # ----------------------
                 #  Train Discriminators
                 # ----------------------
+                d_noised_signals_A = tf.keras.layers.GaussianNoise(0.01)(signals_A)
+                d_noised_signals_B = tf.keras.layers.GaussianNoise(0.01)(signals_B)
 
-                d_loss = self.d_combined.train_on_batch([signals_A, signals_B, noise],
+                d_loss = self.d_combined.train_on_batch([d_noised_signals_A, d_noised_signals_B, noise],
                                                         [valid, valid, fake, fake])
 
 

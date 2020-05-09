@@ -1,22 +1,15 @@
 
 Cloud:
     - Setup
-        > Get the cloud credit from your columbia email.
-    - Data download
-        > Download dataset onto the cloud.
-    - Training
-        > Laptop does not have the hardware necessary to train this model.
-        > I need to get to the point where I can have it run overnight and generate sample outputs.
 
 Dataset:
     - Need to be able to read in RAVDESS data
-        > Ravdess is 48khz. It's also sampled too quickly
+        > Ravdess is 48khz. It's sampled far too quickly.
+        > Shell script in place to handle that. We can now train on ravdess, in theory.
 
 
 Training/Saving:
-    - Saving is set up.
-    - Need to watch out for failures during training, since checkpoint
-    - Model can train
+    - Model trains, saves, and exports stuff. Need to check exported materials.
 
 Evaluation:
     - Need metrics
@@ -27,9 +20,5 @@ Evaluation:
 
 Network:
     - Write attention mechanism
-        > Refer to convolutional attention GAN
-        > Learned about attention. Turns out, it's very similar to a fully connected layer with many channels when used on images.
-        > The features of a single example can be enormous. If the sentence in ravdess is 4 seconds, then at 16kHz, we're
-            talking an input size of 192KB. The good news is that the convolutional network doesn't really
-            get larger with input length. It only scales with feature size.
-        > Then modify the generator/discriminator with attention, possibly writing new versions.
+        > This is pretty much a no-go. There's simply way too much memory required to do attention.
+        

@@ -7,8 +7,10 @@ emotion transformation.
 ## Dependencies
 `pip3 install -r requirements.txt`
 
-## Dataset Download
+## Dataset Download And Preprocessing
+`sudo apt install sox`
 `sh get_ravdess.sh`
+`sh process_ravdess.sh`
 
 ## Train and Eval model
 

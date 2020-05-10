@@ -5,17 +5,16 @@ Originally intended for language translation problems, it is currently being use
 emotion transformation.
 
 ## Dependencies
-1. Tensorflow 2.1
-2. Python 3.5
+`pip3 install -r requirements.txt`
 
 ## Dataset Download
-
-1. Install kaggle API
-2. `kaggle datasets download -d uwrfkaggler/ravdess-emotional-speech-audio -p data/ravdess`
+`sh get_ravdess.sh`
 
 ## Train and Eval model
 
 1. Modify config.json as desired
-2. `python3 main.py --model_name=my_model --train --eval`
+2. `python3 main.py --model_name=my_model --train --eval --dataset ravdess_chunked`
 
 ## Results
+
+Awaiting.

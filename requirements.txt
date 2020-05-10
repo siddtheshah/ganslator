@@ -1,0 +1,5 @@
+tensorflow==2.2.0rc3
+tensorflow-addons
+numpy
+scipy
+matplotlib

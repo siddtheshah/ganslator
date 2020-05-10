@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 import network.combined_model as cm
 import network.dataset_util as ds_util
+import eval.inception
 
 import os
 import json
@@ -25,7 +26,7 @@ def get_dataset_from_args(configs):
     if args.dataset == 'ravdess_chunked':
         if not os.path.isdir(os.path.join(configs['data_dir'], 'ravdess')):
             raise FileNotFoundError("Could not find ravdess path. Aborted")
-        return ds_util.chunked_ravdess(os.path.join(configs['data_dir'], 'ravdess'), chunk_size=configs['samples'], misalignment=200, starting_offset=10000)
+        return ds_util.chunked_ravdess(os.path.join(configs['data_dir'], 'ravdess'), chunk_size=configs['samples'], starting_offset=10000)
 
 
 
@@ -35,7 +36,7 @@ def run_training(configs, model_name):
     model_path = os.path.join(configs["storage_dir"], model_name)
     if not os.path.isdir(model_path):
         os.mkdir(model_path)
-    model.train(dataset, configs['epochs'], configs['batch_size'], configs['save_interval'], configs['synth_dir'])
+    model.train(dataset, configs['epochs'], configs['batch_size'], configs['save_interval'], configs['result_dir'])
     model.save_to_path(model_path)
 
 
@@ -52,6 +53,10 @@ def train_model(configs, model_name):
 def eval_model(configs, model_name):
     model = cm.GANslator(sample_size=configs['samples'], r_scale=configs['r_scale'], feature_size=configs['mel_bins'], filter_dim=configs['filter_dim'])
     model.load_from_path(os.path.join(configs["storage_dir"], model_name))
+    dataset = get_dataset_from_args(configs)
+    model_results_path = os.path.join(configs["result_dir"], model_name)
+    model.sample_for_eval(model_results_path, dataset)
+    eval.inception.score(model_results_path)
 
 
 def main():

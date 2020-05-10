@@ -8,6 +8,7 @@ from network.generator import *
 import numpy as np
 import os
 
+
 class GANslator:
     def __init__(self,
                  sample_size=16384,
@@ -28,8 +29,8 @@ class GANslator:
         self.noise_shape = tf.constant([self.z_dim])
 
         # Loss weights
-        self.lambda_cycle = 10.0                    # Cycle-consistency loss
-        self.lambda_id = 0.1 * self.lambda_cycle    # Identity loss
+        self.lambda_cycle = 10.0  # Cycle-consistency loss
+        self.lambda_id = 0.1 * self.lambda_cycle  # Identity loss
 
         self.g_optimizer = Adam(0.0001, 0.5)
         self.d_optimizer = Adam(0.0004, 0.5)
@@ -47,10 +48,10 @@ class GANslator:
         self.g_combined = self.build_combined_generator_model()
 
     def build_combined_generator_model(self):
-        #-------------------------
+        # -------------------------
         # Construct Computational
         #   Graph of Generators
-        #-------------------------
+        # -------------------------
 
         # Input images from both domains
         signal_A = tf.keras.layers.Input(shape=self.input_shape, name="signal_A")
@@ -84,24 +85,24 @@ class GANslator:
 
         # Combined model trains generators to fool discriminators
         combined = Model(inputs=[signal_A, signal_B, noise],
-                              outputs=[valid_A, valid_B,
-                                        reconstr_A, reconstr_B,
-                                        img_A_id, img_B_id])
+                         outputs=[valid_A, valid_B,
+                                  reconstr_A, reconstr_B,
+                                  img_A_id, img_B_id])
         combined.compile(loss=['mse', 'mse',
-                                    'mae', 'mae',
-                                    'mae', 'mae'],
-                            loss_weights=[1, 1,
-                                            self.lambda_cycle, self.lambda_cycle,
-                                            self.lambda_id, self.lambda_id],
-                            optimizer=self.g_optimizer)
+                               'mae', 'mae',
+                               'mae', 'mae'],
+                         loss_weights=[1, 1,
+                                       self.lambda_cycle, self.lambda_cycle,
+                                       self.lambda_id, self.lambda_id],
+                         optimizer=self.g_optimizer)
 
         return combined
 
     def build_combined_discriminator_model(self):
-        #-------------------------
+        # -------------------------
         # Construct Computational
         #   Graph of Discriminators
-        #-------------------------
+        # -------------------------
 
         # Input images from both domains
         signal_A = tf.keras.layers.Input(shape=self.input_shape)
@@ -133,17 +134,6 @@ class GANslator:
         combined.compile(loss='mse', optimizer=self.d_optimizer, metrics=['accuracy'])
 
         return combined
-        #
-        # dA_loss_real = self.d_A.train_on_batch(features_A, features_valid)
-        # dA_loss_fake = self.d_A.train_on_batch(fake_A, features_fake)
-        # dA_loss = 0.5 * np.add(dA_loss_real, dA_loss_fake)
-        #
-        # dB_loss_real = self.d_B.train_on_batch(features_B, features_valid)
-        # dB_loss_fake = self.d_B.train_on_batch(fake_B, features_fake)
-        # dB_loss = 0.5 * np.add(dB_loss_real, dB_loss_fake)
-        # # Total disciminator loss
-        # d_loss = 0.5 * np.add(dA_loss, dB_loss)
-
 
     def build_generator(self):
         return GeneratorModel(self.sample_size, self.feature_size, self.z_dim, self.r_scale, self.filter_dim)
@@ -169,8 +159,8 @@ class GANslator:
         start_time = datetime.datetime.now()
 
         # Adversarial loss ground truths
-        valid = np.ones(batch_size)*0.98
-        fake = np.ones(batch_size)*0.02
+        valid = np.ones(batch_size) * 0.98
+        fake = np.ones(batch_size) * 0.02
 
         for epoch in range(epochs):
             for batch_i, (signals_A, signals_B) in enumerate(dataset.batch(batch_size)):
@@ -185,7 +175,6 @@ class GANslator:
                 d_loss = self.d_combined.train_on_batch([d_noised_signals_A, d_noised_signals_B, noise],
                                                         [valid, valid, fake, fake])
 
-
                 # ------------------
                 #  Train Generators
                 # ------------------
@@ -193,35 +182,29 @@ class GANslator:
                 # Train the generators
                 g_loss = self.g_combined.train_on_batch([signals_A, signals_B, noise],
                                                         [valid, valid,
-                                                        signals_A, signals_B,
-                                                        signals_A, signals_B],)
+                                                         signals_A, signals_B,
+                                                         signals_A, signals_B])
 
                 elapsed_time = datetime.datetime.now() - start_time
 
                 # Plot the progress
                 print(
                     "[Epoch {:d}/{:d}] [Batch {:d}] [D loss: {:f}, acc: {:3f}%] [G loss: {:05f}, adv: {:05f}, recon: {:05f}, id: {:05f}] time: {} " \
-                    .format(int(epoch), int(epochs),
-                            int(batch_i),
-                            d_loss[0], 100 * d_loss[1],
-                            g_loss[0],
-                            np.mean(g_loss[1:3]),
-                            np.mean(g_loss[3:5]),
-                            np.mean(g_loss[5:6]),
-                            elapsed_time))
+                        .format(int(epoch), int(epochs),
+                                int(batch_i),
+                                d_loss[0], 100 * d_loss[1],
+                                g_loss[0],
+                                np.mean(g_loss[1:3]),
+                                np.mean(g_loss[3:5]),
+                                np.mean(g_loss[5:6]),
+                                elapsed_time))
 
             # If at save interval => save generated image samples
             if save_path and epoch % save_interval == 0:
-                self.sample_sounds(save_path, epoch, batch_i, signals_A, signals_B, noise)
+                self.samples_during_training(save_path, epoch, batch_i, signals_A, signals_B, batch_size)
                 self.save_to_path(save_path)
 
-    def sample_sounds(self, save_path, epoch, batch_i, signals_A, signals_B, noise):
-        # Get fake and reconstructed outputs
-        model_name = os.path.basename(save_path)
-        prefix = os.path.join(model_name, "epoch_{}_batch_{}_".format(epoch, batch_i))
-        wav_suffix = ".wav"
-        img_suffix = ".jpg"
-
+    def predict_first(self, signals_A, signals_B, noise):
         features_A = MelSpecFeatures(self.feature_size)(signals_A)
         features_B = MelSpecFeatures(self.feature_size)(signals_B)
 
@@ -231,36 +214,90 @@ class GANslator:
         reconstr_A = self.g_BA.predict({"Cond_in": fake_B, "Z_in": noise})
         reconstr_B = self.g_AB.predict({"Cond_in": fake_A, "Z_in": noise})
 
+        return signals_A[0], signals_B[0], fake_A[0, :, 0], fake_B[0, :, 0], reconstr_A[0, :, 0], reconstr_B[0, :, 0]
+
+    # Meant to be called after training. Generates images without axes to be used for inception scoring.
+    def sample_for_eval(self, save_path, dataset):
+        im_path = os.path.join(save_path, "images")
+        if not os.path.isdir(im_path):
+            os.makedirs(im_path, exist_ok=True)
+        sounds_path = os.path.join(save_path, "sounds")
+        if not os.path.isdir(sounds_path):
+            os.makedirs(sounds_path, exist_ok=True)
         plt.figure()
-        plt.plot(signals_A[0].numpy())
+        plt.yscale("log")
+        plt.axis("off")
+        i = 0
+        for signal_A, signal_B in dataset.batch(1):
+            noise = tf.random.normal(([1], self.z_dim))
+            _, _, fake_A, fake_B, _, _ = self.evaluate_first(signal_A, signal_B, noise)
+
+            plt.clf()
+            plt.plot(signal_A.numpy())
+            plt.savefig(os.path.join(im_path, "real" + str(i) + ".jpg"), bbox_inches='tight')
+            plt.clf()
+            plt.plot(fake_A.numpy())
+            plt.savefig(os.path.join(im_path, "fake" + str(i) + ".jpg"), bbox_inches='tight')
+
+            fake_A_encode = tf.audio.encode_wav(tf.expand_dims(fake_A, 1), sample_rate=22000)
+            tf.io.write_file(os.path.join(sounds_path, "fake" + str(i) + ".wav"), fake_A_encode)
+
+            i += 1
+
+            plt.clf()
+            plt.plot(signal_B.numpy())
+            plt.savefig(os.path.join(im_path, "real" + str(i) + ".jpg"), bbox_inches='tight')
+            plt.clf()
+            plt.plot(fake_B.numpy())
+            plt.savefig(os.path.join(im_path, "fake" + str(i) + ".jpg"), bbox_inches='tight')
+
+            fake_B_encode = tf.audio.encode_wav(tf.expand_dims(fake_B, 1), sample_rate=22000)
+            tf.io.write_file(os.path.join(sounds_path, "fake" + str(i) + ".wav"), fake_B_encode)
+
+            i += 1
+
+    # Meant to be called during training
+    def samples_during_training(self, save_path, epoch, batch_i, signals_A, signals_B, batch_size):
+        noise = tf.random.normal((batch_size, self.z_dim))
+
+        signal_A, signal_B, fake_A, fake_B, reconstr_A, reconstr_B = self.predict_first(signals_A, signals_B, noise)
+        # Get fake and reconstructed outputs
+        model_name = os.path.basename(save_path)
+        prefix = os.path.join(model_name, "epoch{}_batch{}_".format(epoch, batch_i))
+        wav_suffix = ".wav"
+        img_suffix = ".jpg"
+
+        plt.figure()
+        plt.plot(signals_A.numpy())
         plt.savefig(prefix + "signal_A" + img_suffix)
 
         plt.clf()
-        plt.plot(signals_B[0].numpy())
+        plt.plot(signals_B.numpy())
         plt.savefig(prefix + "signal_B" + img_suffix)
 
         plt.clf()
-        plt.plot(fake_A[0, :, 0])
+        plt.plot(fake_A)
         plt.savefig(prefix + "fake_A" + img_suffix)
 
         plt.clf()
-        plt.plot(fake_B[0, :, 0])
+        plt.plot(fake_B)
         plt.savefig(prefix + "fake_B" + img_suffix)
 
         plt.clf()
-        plt.plot(reconstr_A[0, :, 0])
+        plt.plot(reconstr_A)
         plt.savefig(prefix + "reconstr_A" + img_suffix)
 
         plt.clf()
-        plt.plot(reconstr_B[0, :, 0])
+        plt.plot(reconstr_B)
         plt.savefig(prefix + "reconstr_B" + img_suffix)
 
         # Save some sample sounds
-        fake_A_encode = tf.audio.encode_wav(tf.expand_dims(fake_A[0, :, 0], 1), sample_rate=22000)
+        fake_A_encode = tf.audio.encode_wav(tf.expand_dims(fake_A, 1), sample_rate=22000)
         tf.io.write_file(prefix + "fake_A" + wav_suffix, fake_A_encode)
 
-        fake_B_encode = tf.audio.encode_wav(tf.expand_dims(fake_B[0, :,0], 1), sample_rate=22000)
+        fake_B_encode = tf.audio.encode_wav(tf.expand_dims(fake_B, 1), sample_rate=22000)
         tf.io.write_file(prefix + "fake_B" + wav_suffix, fake_B_encode)
+
 
 if __name__ == '__main__':
     gan = GANslator()

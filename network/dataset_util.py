@@ -47,10 +47,10 @@ def basic_ravdess(ravdess_dir, samples, emotion_input=1, emotion_output=3):
     output_wav = output_ds.map(load_audio_fn(samples), num_parallel_calls=AUTOTUNE)
     return tf.data.Dataset.zip((input_wav, output_wav))
 
-def chunked_ravdess(ravdess_dir, chunk_size, misalignment, starting_offset, emotion_input=1, emotion_output=3):
+def chunked_ravdess(ravdess_dir, chunk_size, starting_offset, emotion_input=1, emotion_output=3):
     input_ds, output_ds = collect_matching_ravdess_files(ravdess_dir, emotion_input, emotion_output)
-    input_wav = input_ds.flat_map(audio_chunking_fn(chunk_size, misalignment, starting_offset))
-    output_wav = output_ds.flat_map(audio_chunking_fn(chunk_size, misalignment, starting_offset))
+    input_wav = input_ds.flat_map(audio_chunking_fn(chunk_size, starting_offset))
+    output_wav = output_ds.flat_map(audio_chunking_fn(chunk_size, starting_offset))
     return tf.data.Dataset.zip((input_wav, output_wav))
 
 """

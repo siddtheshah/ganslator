@@ -8,7 +8,7 @@
   "batch_size": 1,
   "storage_dir": "models",
   "data_dir": "data",
-  "synth_dir": "results",
+  "result_dir": "results",
   "learning_rate": 2e-3,
   "use_gpu": true
 }

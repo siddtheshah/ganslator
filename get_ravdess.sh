@@ -1,4 +1,5 @@
 mkdir -p download/ravdess
+mkdir -p data/ravdess
 DOWNLOAD_URL="https://zenodo.org/record/1188976/files/Audio_Speech_Actors_01-24.zip?download=1"
 wget $DOWNLOAD_URL download/ravdess
 

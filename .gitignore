@@ -1,6 +1,7 @@
 models*
 data*
 results*
+download*
 network/testing/test*
 network/testing/discriminator*
 network/testing/generator*

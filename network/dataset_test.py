@@ -27,7 +27,7 @@ class DatasetTest(tf.test.TestCase):
 
     def testChunkedAudio(self):
         path = str(Path(__file__).parent)
-        fn = ds_util.audio_chunking_fn(chunk_size=1024, misalignment=200, starting_offset=1000)
+        fn = ds_util.audio_chunking_fn(chunk_size=1024, starting_offset=1000)
         audio_chunks = fn(os.path.join(path, "testing", "more_testdata", "Clap_00006.wav"))
         first = audio_chunks[0]
         second = audio_chunks[1]

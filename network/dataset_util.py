@@ -81,23 +81,18 @@ def load_audio(file_path, samples):
     audio = tf.squeeze(audio)
     return audio
 
-# Misalignment should be specified as a layer, but that would require reading in an unchunked tensor
-# into the model itself. We instead do it at the DS level.
-def audio_chunking_fn(chunk_size, misalignment, starting_offset):
-    return lambda x: load_chunked_audio(x, chunk_size, misalignment, starting_offset)
+def audio_chunking_fn(chunk_size, starting_offset):
+    return lambda x: load_chunked_audio(x, chunk_size, starting_offset)
 
-def load_chunked_audio(file_path, chunk_size, misalignment, starting_offset):
+def load_chunked_audio(file_path, chunk_size, starting_offset):
     audio = tf.io.read_file(file_path)
     audio, sr = tf.audio.decode_wav(audio, desired_channels=1, desired_samples=-1)
     audio = tf.squeeze(audio)
     audio_size = tf.shape(audio)[0]
-    num_samples = audio_size - starting_offset - misalignment*10
+    num_samples = audio_size - starting_offset
     num_chunks = tf.cast(num_samples / chunk_size, tf.int32)
-    r = tf.random.normal([1])
-    shift = tf.cast(misalignment * r, tf.int32)
-    start = starting_offset + shift
     size = tf.convert_to_tensor(num_chunks * chunk_size)
-    audio_slice = tf.slice(audio, start, [size])
+    audio_slice = tf.slice(audio, [starting_offset], [size])
     rs = tf.reshape(audio_slice, [-1, chunk_size])
     return tf.unstack(rs)
 

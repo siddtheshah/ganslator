@@ -21,9 +21,13 @@ def GeneratorFn(
     samples //= r_scale
 
     conv2 = temporal_conv_downsample(conv1, filters, conv_size, r_scale)
+    attn2 = tf.keras.layers.Attention()([conv2, conv2])
+    attn2_norm = tf.keras.layers.BatchNormalization()(attn2)
     samples //= r_scale
 
     conv3 = temporal_conv_downsample(conv2, filters, conv_size, r_scale)
+    attn3 = tf.keras.layers.Attention()([conv3, conv3])
+    attn3_norm = tf.keras.layers.BatchNormalization()(attn3)
     samples //= r_scale
 
     conv3_flat = tf.keras.layers.Flatten()(conv3)
@@ -37,13 +41,12 @@ def GeneratorFn(
     unencoded_norm = tf.keras.layers.BatchNormalization()(unencoded)
 
     unencoded_norm_rs = tf.reshape(unencoded_norm, [-1, samples, filters], name="ReshapeUnencoded")
-    conv3_id = tf.keras.layers.Lambda(lambda x : x, name="DownConv3_skip")(conv3)
-    skip0 = tf.concat([unencoded_norm_rs, conv3_id], axis=2)
+    skip0 = tf.concat([unencoded_norm_rs, attn3_norm], axis=2)
 
     # Now do temporal deconvolutions
 
     deconv1 = temporal_deconv(skip0, filters, r_scale, name="UpConv1")
-    skip1 = tf.keras.layers.concatenate([deconv1, conv2], axis=2, name="Concat1")
+    skip1 = tf.keras.layers.concatenate([deconv1, attn2_norm], axis=2, name="Concat1")
     samples *= r_scale
 
     deconv2 = temporal_deconv(skip1, filters, r_scale, name="UpConv2")

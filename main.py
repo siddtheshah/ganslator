@@ -17,7 +17,7 @@ parser.add_argument('--overwrite', default=False, help='Whether to overwrite exi
 parser.add_argument('--dataset', default='ravdess_chunked', help='Which dataset to use')
 args = parser.parse_args()
 
-
+# If using a custom dataset, separate your data into two folders corresponding to different types: "domain1", "domain2"
 def get_dataset_from_args(configs):
     if args.dataset == 'ravdess':
         if not os.path.isdir(os.path.join(configs['data_dir'], 'ravdess')):
@@ -28,6 +28,9 @@ def get_dataset_from_args(configs):
             raise FileNotFoundError("Could not find ravdess path. Aborted")
         return ds_util.chunked_ravdess(os.path.join(configs['data_dir'], 'ravdess'), chunk_size=configs['samples'], starting_offset=10000)
 
+    input_spec = os.path.join(configs['data_dir'], args.dataset, "domain1", "*")
+    output_spec = os.path.join(configs['data_dir'], args.dataset, "domain2", "*")
+    return ds_util.create_unconditioned_dataset_from_io_spec(input_spec, output_spec, configs['samples'])
 
 
 def run_training(configs, model_name):

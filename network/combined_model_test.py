@@ -12,8 +12,8 @@ class CombinedModelTest(tf.test.TestCase):
     def testModelTrainableSaveable(self):
 
         path = str(Path(__file__).parent)
-        ganslator = combined_model.GANslator(sample_size=8192)
-        dataset = ds_util.create_unconditioned_dataset_from_io_spec(os.path.join(path, "testing/more_testdata/*"), os.path.join(path, "testing/more_testdata/*"), samples=8192)
+        ganslator = combined_model.GANslator(sample_size=1024, r_scale=4)
+        dataset = ds_util.create_unconditioned_dataset_from_io_spec(os.path.join(path, "testing/more_testdata/*"), os.path.join(path, "testing/more_testdata/*"), samples=1024)
         ganslator.train(dataset, 2, save_interval=1)
         model_save_path = os.path.join(path, "testing")
         ganslator.save_to_path(model_save_path)

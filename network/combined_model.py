@@ -234,7 +234,7 @@ class GANslator:
         return features_A.numpy(), features_B.numpy(), fake_A.numpy(),\
                fake_B.numpy(), reconstr_A.numpy(), reconstr_B.numpy()
 
-    # Meant to be called after training. Generates images without axes to be used for inception scoring.
+    # Meant to be called after training. Generates spectrogram images.
     def sample_for_eval(self, save_path, dataset):
         im_path = os.path.join(save_path, "images")
         if not os.path.isdir(im_path):
@@ -268,8 +268,9 @@ class GANslator:
 
             i += 1
 
-    # Meant to be called during training
+    # Meant to be called during training. Generates spectrogram images.
     def samples_during_training(self, save_path, epoch, batch_i, signals_A, signals_B, batch_size):
+        print("Collecting samples...")
         noise = tf.random.normal((batch_size, self.z_dim))
 
         signal_A, signal_B, fake_A, fake_B, reconstr_A, reconstr_B = \

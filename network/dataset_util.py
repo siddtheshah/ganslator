@@ -86,7 +86,7 @@ def audio_chunking_fn(chunk_size, starting_offset):
 
 def load_chunked_audio(file_path, chunk_size, starting_offset):
     audio = tf.io.read_file(file_path)
-    audio, sr = tf.audio.decode_wav(audio, desired_channels=1, desired_samples=-1)
+    audio, sr = tf.audio.decode_wav(audio, desired_channels=1, desired_samples=65536)
     audio = tf.squeeze(audio)
     audio_size = tf.shape(audio)[0]
     num_samples = audio_size - starting_offset
@@ -94,5 +94,5 @@ def load_chunked_audio(file_path, chunk_size, starting_offset):
     size = tf.convert_to_tensor(num_chunks * chunk_size)
     audio_slice = tf.slice(audio, [starting_offset], [size])
     rs = tf.reshape(audio_slice, [-1, chunk_size])
-    return tf.unstack(rs)
+    return tf.data.Dataset.from_tensor_slices(rs)
 

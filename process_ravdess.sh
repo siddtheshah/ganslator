@@ -1,5 +1,5 @@
-CONVERTED_PATH=data/ravdess
-
+CONVERTED_PATH=data/ravdess/
+mkdir -p data/ravdess
 for filename in download/**/*; do
   file_base="$(basename -- $filename)"
   echo $file_base

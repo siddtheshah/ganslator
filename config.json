@@ -1,6 +1,6 @@
 {
-  "samples": 1024,
-  "r_scale": 4,
+  "samples": 16384,
+  "r_scale": 16,
   "mel_bins": 32,
   "filter_dim": 64,
   "epochs": 15,

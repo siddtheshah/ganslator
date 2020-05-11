@@ -67,6 +67,9 @@ def main():
     with open('config.json') as config_file:
         configs = json.load(config_file)
 
+        if not os.path.isdir(configs["storage_dir"]):
+            os.makedirs(configs["storage_dir"])
+
         if os.path.isdir(os.path.join(configs["storage_dir"], args.model_name)) and not args.overwrite:
             raise FileExistsError("There's an existing model with the same name. Specify --overwrite. Aborted.")
 

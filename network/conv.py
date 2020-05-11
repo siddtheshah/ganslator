@@ -3,18 +3,27 @@ from tensorflow.keras.models import Model
 import numpy as np
 import tensorflow_addons as tfa
 
-class MultiHeadAttention(tf.keras.layers.Layer):
-    def __init__(self, depth, heads):
-        self.heads = heads
-        self.depth = depth
 
+def multilevel_attention(layer_input, depth):
+    attn = layer_input
+    for i in range(depth):
+        attn = tf.keras.layers.Attention()([attn, attn])
+    return attn
 
 # If the input is (batch_size, samples, features), then the output will be (batch_size, reduced_samples, filters)
 # And then instance norm, of course.
 
 # ONLY CONVOLVES OVER TIME DIMENSION
 def temporal_conv_downsample(layer_input, num_filters, kernel_length, reduce_factor, name=None):
-    d = tf.keras.layers.Conv1D(num_filters, kernel_length, padding='same', name=name)(layer_input)
+    # Adds attention.
+    # samples = layer_input.get_shape()[1]
+    # in_filters = layer_input.get_shape()[2]
+    # attn_length = tf.size(layer_input)/reduce_factor
+    # rs = tf.reshape(layer_input, (attn_length, reduce_factor))
+    # print(rs.get_shape())
+    attn = multilevel_attention(layer_input, 1)
+
+    d = tf.keras.layers.Conv1D(num_filters, kernel_length, padding='same', name=name)(attn)
     d = tf.keras.layers.LeakyReLU(alpha=0.2)(d)
     d = tfa.layers.InstanceNormalization(axis=2,
                                          center=True,
@@ -42,15 +51,16 @@ def temporal_deconv(layer_input, num_filters, enlarge_factor, name=None):
                                          scale=True,
                                          beta_initializer="random_uniform",
                                          gamma_initializer="random_uniform")(d)
+    attn = tf.keras.layers.Attention()([d, d])
 
-    return d
+    return attn
 
 class MelSpecFeatures(tf.keras.layers.Layer):
     def __init__(self, num_mel_bins):
         self.num_mel_bins = num_mel_bins
         super(MelSpecFeatures, self).__init__()
 
-    def call(self, x):
+    def call(self, x, **kwargs):
         sample_rate = 16000.0
 
         # A 1024-point STFT with frames of 64 ms and 75% overlap.

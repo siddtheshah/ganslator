@@ -1,9 +1,10 @@
+from network.discriminator import *
+from network.generator import *
+
 from tensorflow.keras.optimizers import Adam
 import datetime
 import matplotlib.pyplot as plt
-
-from network.discriminator import *
-from network.generator import *
+from PIL import Image
 
 import numpy as np
 import os
@@ -204,7 +205,7 @@ class GANslator:
                 self.samples_during_training(save_path, epoch, batch_i, signals_A, signals_B, batch_size)
                 self.save_to_path(save_path)
 
-    def predict_first(self, signals_A, signals_B, noise):
+    def predict(self, signals_A, signals_B, noise):
         features_A = MelSpecFeatures(self.feature_size)(signals_A)
         features_B = MelSpecFeatures(self.feature_size)(signals_B)
 
@@ -214,7 +215,24 @@ class GANslator:
         reconstr_A = self.g_BA.predict({"Cond_in": fake_B, "Z_in": noise})
         reconstr_B = self.g_AB.predict({"Cond_in": fake_A, "Z_in": noise})
 
-        return signals_A[0], signals_B[0], fake_A[0, :, 0], fake_B[0, :, 0], reconstr_A[0, :, 0], reconstr_B[0, :, 0]
+        return features_A, features_B, fake_A, fake_B, reconstr_A, reconstr_B
+
+
+    def images_of_first(self, signals_A, signals_B, noise):
+        features_A, features_B, fake_A, fake_B, reconstr_A, reconstr_B = \
+            self.predict(signals_A, signals_B, noise)
+
+        features_A = tf.image.resize(features_A[0], (256, 256))
+        features_B = tf.image.resize(features_B[0], (256, 256))
+
+        fake_A = tf.image.resize(fake_A[0], (256, 256))
+        fake_B = tf.image.resize(fake_B[0], (256, 256))
+
+        reconstr_A = tf.image.resize(reconstr_A[0], (256, 256))
+        reconstr_B = tf.image.resize(reconstr_B[0], (256, 256))
+
+        return features_A.numpy(), features_B.numpy(), fake_A.numpy(),\
+               fake_B.numpy(), reconstr_A.numpy(), reconstr_B.numpy()
 
     # Meant to be called after training. Generates images without axes to be used for inception scoring.
     def sample_for_eval(self, save_path, dataset):
@@ -230,28 +248,22 @@ class GANslator:
         i = 0
         for signal_A, signal_B in dataset.batch(1):
             noise = tf.random.normal(([1], self.z_dim))
-            _, _, fake_A, fake_B, _, _ = self.evaluate_first(signal_A, signal_B, noise)
 
-            plt.clf()
-            plt.plot(signal_A.numpy())
-            plt.savefig(os.path.join(im_path, "real" + str(i) + ".jpg"), bbox_inches='tight')
-            plt.clf()
-            plt.plot(fake_A.numpy())
-            plt.savefig(os.path.join(im_path, "fake" + str(i) + ".jpg"), bbox_inches='tight')
+            _, _, fake_A, fake_B, _, _ = self.predict(signal_A, signal_B, noise)
+            signal_A_im, signal_B_im, fake_A_im, fake_B_im, _, _ = self.images_of_first(signal_A, signal_B, noise)
 
-            fake_A_encode = tf.audio.encode_wav(tf.expand_dims(fake_A, 1), sample_rate=22000)
+            Image.fromarray(signal_A_im).imsave(os.path.join(im_path, "real" + str(i) + ".jpg"))
+            Image.fromarray(fake_A_im).imsave(os.path.join(im_path, "fake" + str(i) + ".jpg"))
+
+            fake_A_encode = tf.audio.encode_wav(tf.expand_dims(fake_A[0, :, 0], 1), sample_rate=22000)
             tf.io.write_file(os.path.join(sounds_path, "fake" + str(i) + ".wav"), fake_A_encode)
 
             i += 1
 
-            plt.clf()
-            plt.plot(signal_B.numpy())
-            plt.savefig(os.path.join(im_path, "real" + str(i) + ".jpg"), bbox_inches='tight')
-            plt.clf()
-            plt.plot(fake_B.numpy())
-            plt.savefig(os.path.join(im_path, "fake" + str(i) + ".jpg"), bbox_inches='tight')
+            Image.fromarray(signal_B_im).imsave(os.path.join(im_path, "real" + str(i) + ".jpg"))
+            Image.fromarray(fake_B_im).imsave(os.path.join(im_path, "fake" + str(i) + ".jpg"))
 
-            fake_B_encode = tf.audio.encode_wav(tf.expand_dims(fake_B, 1), sample_rate=22000)
+            fake_B_encode = tf.audio.encode_wav(tf.expand_dims(fake_B[0, :, 0], 1), sample_rate=22000)
             tf.io.write_file(os.path.join(sounds_path, "fake" + str(i) + ".wav"), fake_B_encode)
 
             i += 1
@@ -260,43 +272,26 @@ class GANslator:
     def samples_during_training(self, save_path, epoch, batch_i, signals_A, signals_B, batch_size):
         noise = tf.random.normal((batch_size, self.z_dim))
 
-        signal_A, signal_B, fake_A, fake_B, reconstr_A, reconstr_B = self.predict_first(signals_A, signals_B, noise)
+        signal_A, signal_B, fake_A, fake_B, reconstr_A, reconstr_B = \
+            self.predict(signals_A, signals_B, noise)
+        signal_A_im, signal_B_im, fake_A_im, fake_B_im, reconstr_A_im, reconstr_B_im = \
+            self.images_of_first(signals_A, signals_B, noise)
+
         # Get fake and reconstructed outputs
         model_name = os.path.basename(save_path)
         prefix = os.path.join(model_name, "epoch{}_batch{}_".format(epoch, batch_i))
-        wav_suffix = ".wav"
-        img_suffix = ".jpg"
 
-        plt.figure()
-        plt.plot(signals_A.numpy())
-        plt.savefig(prefix + "signal_A" + img_suffix)
-
-        plt.clf()
-        plt.plot(signals_B.numpy())
-        plt.savefig(prefix + "signal_B" + img_suffix)
-
-        plt.clf()
-        plt.plot(fake_A)
-        plt.savefig(prefix + "fake_A" + img_suffix)
-
-        plt.clf()
-        plt.plot(fake_B)
-        plt.savefig(prefix + "fake_B" + img_suffix)
-
-        plt.clf()
-        plt.plot(reconstr_A)
-        plt.savefig(prefix + "reconstr_A" + img_suffix)
-
-        plt.clf()
-        plt.plot(reconstr_B)
-        plt.savefig(prefix + "reconstr_B" + img_suffix)
+        Image.fromarray(signal_A_im).imsave(prefix + "realA.jpg")
+        Image.fromarray(fake_A_im).imsave(prefix + "fakeA.jpg")
+        Image.fromarray(signal_B_im).imsave(prefix + "realB.jpg")
+        Image.fromarray(fake_B_im).imsave(prefix + "fakeB.jpg")
 
         # Save some sample sounds
-        fake_A_encode = tf.audio.encode_wav(tf.expand_dims(fake_A, 1), sample_rate=22000)
-        tf.io.write_file(prefix + "fake_A" + wav_suffix, fake_A_encode)
+        fake_A_encode = tf.audio.encode_wav(tf.expand_dims(fake_A[0, :, 0], 1), sample_rate=22000)
+        tf.io.write_file(prefix + "fake_A.wav", fake_A_encode)
 
-        fake_B_encode = tf.audio.encode_wav(tf.expand_dims(fake_B, 1), sample_rate=22000)
-        tf.io.write_file(prefix + "fake_B" + wav_suffix, fake_B_encode)
+        fake_B_encode = tf.audio.encode_wav(tf.expand_dims(fake_B[0, :, 0], 1), sample_rate=22000)
+        tf.io.write_file(prefix + "fake_B.wav", fake_B_encode)
 
 
 if __name__ == '__main__':

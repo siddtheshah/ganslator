@@ -9,7 +9,6 @@ from scipy.linalg import sqrtm
 from PIL import Image
 from tensorflow.keras.applications.inception_v3 import InceptionV3
 from tensorflow.keras.applications.inception_v3 import preprocess_input
-from skimage.transform import resize
 import os
 import glob
 
@@ -17,15 +16,23 @@ import glob
 def scale_images(images, new_shape):
     images_list = list()
     for image in images:
-        # resize with nearest neighbor interpolation
-        new_image = resize(image, new_shape, 0)
+        # resize
+        new_image = tf.image.resize(image, new_shape, 0)
         # store
         images_list.append(new_image)
     return asarray(images_list)
 
 
+def calculate_inception_score(model, images):
+    preds = model.predict(images)
+    preds = np.exp(preds) / np.sum(np.exp(preds), 1, keepdims=True)
+    kl = preds * (np.log(preds) - np.log(np.expand_dims(np.mean(preds, 0), 0)))
+    kl = np.mean(np.sum(kl, 1))
+
+    return kl
+
 # calculate frechet inception distance
-def calculate_score(model, images1, images2):
+def calculate_frechet_distance(model, images1, images2):
     # calculate activations
     act1 = model.predict(images1)
     act2 = model.predict(images2)
@@ -58,20 +65,22 @@ def score(model_results_dir):
 
     print('Prepared', real.shape, fake.shape)
     # convert integer to floating point values
-    images1 = real.astype('float32')
-    images2 = fake.astype('float32')
+    real = real.astype('float32')
+    fake = fake.astype('float32')
     # resize images
-    images1 = scale_images(images1, (256, 256, 3))
-    images2 = scale_images(images2, (256, 256, 3))
-    print('Scaled', images1.shape, images2.shape)
+    real = scale_images(real, (256, 256, 3))
+    fake = scale_images(fake, (256, 256, 3))
+    print('Scaled', real.shape, fake.shape)
     # pre-process images
-    images1 = preprocess_input(images1)
-    images2 = preprocess_input(images2)
-    # fid between images1 and images1
-    fid_id = calculate_score(model, images1, images1)
-    print('FID (same): %.3f' % fid_id)
-    # fid between images1 and images2
-    fid_cross = calculate_score(model, images1, images2)
-    print('FID (different): %.3f' % fid_cross)
+    real = preprocess_input(real)
+    fake = preprocess_input(fake)
+    # fid between real and real
+    self_fid = calculate_frechet_distance(model, real, real)
+    print('FID (same): %.3f' % self_fid)
+    # fid between real and fake
+    cross_fid = calculate_frechet_distance(model, real, fake)
+    print('FID (different): %.3f' % cross_fid)
+    fake_inception_score = calculate_inception_score(model, fake)
+    print('Inception: %.3f' % fake_inception_score)
 
-    return fid_id, fid_cross
+    return self_fid, cross_fid, fake_inception_score

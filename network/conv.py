@@ -15,15 +15,7 @@ def multilevel_attention(layer_input, depth):
 
 # ONLY CONVOLVES OVER TIME DIMENSION
 def temporal_conv_downsample(layer_input, num_filters, kernel_length, reduce_factor, name=None):
-    # Adds attention.
-    # samples = layer_input.get_shape()[1]
-    # in_filters = layer_input.get_shape()[2]
-    # attn_length = tf.size(layer_input)/reduce_factor
-    # rs = tf.reshape(layer_input, (attn_length, reduce_factor))
-    # print(rs.get_shape())
-    attn = multilevel_attention(layer_input, 1)
-
-    d = tf.keras.layers.Conv1D(num_filters, kernel_length, padding='same', name=name)(attn)
+    d = tf.keras.layers.Conv1D(num_filters, kernel_length, padding='same', name=name)(layer_input)
     d = tf.keras.layers.LeakyReLU(alpha=0.2)(d)
     d = tfa.layers.InstanceNormalization(axis=2,
                                          center=True,
@@ -39,10 +31,14 @@ def temporal_conv_downsample(layer_input, num_filters, kernel_length, reduce_fac
                                          scale=True,
                                          beta_initializer="random_uniform",
                                          gamma_initializer="random_uniform")(d)
+    d = tf.keras.layers.Attention()([d, d])
+    d = tf.keras.layers.BatchNormalization()(d)
     return d
 
 def temporal_deconv(layer_input, num_filters, enlarge_factor, name=None):
-    d = tf.keras.layers.UpSampling1D(size=enlarge_factor)(layer_input)
+    d = tf.keras.layers.Attention()([layer_input, layer_input])
+    d = tf.keras.layers.BatchNormalization()(d)
+    d = tf.keras.layers.UpSampling1D(size=enlarge_factor)(d)
     # Use adjacent values pre-upsample to interpolate.
     d = tf.keras.layers.Conv1D(num_filters, 3*enlarge_factor, padding='same', name=name)(d)
     d = tf.keras.layers.LeakyReLU(alpha=0.2)(d)
@@ -51,9 +47,7 @@ def temporal_deconv(layer_input, num_filters, enlarge_factor, name=None):
                                          scale=True,
                                          beta_initializer="random_uniform",
                                          gamma_initializer="random_uniform")(d)
-    attn = tf.keras.layers.Attention()([d, d])
-
-    return attn
+    return d
 
 class MelSpecFeatures(tf.keras.layers.Layer):
     def __init__(self, num_mel_bins):

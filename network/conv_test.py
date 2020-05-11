@@ -5,7 +5,7 @@ import os
 
 class ConvTest(tf.test.TestCase):
     def setUp(self):
-        super(DatasetTest, self).setUp()
+        super(ConvTest, self).setUp()
 
     def testMelSpecLayer(self):
         example_input = tf.random.uniform((10, 16384))

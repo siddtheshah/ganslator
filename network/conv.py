@@ -57,7 +57,7 @@ class MelSpecFeatures(tf.keras.layers.Layer):
         stfts = tf.signal.stft(x, frame_length=128, frame_step=1, pad_end=True)
 
         # Don't try to propagate gradients through the stft.
-        spectrograms = tf.stop_gradient(tf.abs(stfts))
+        spectrograms = tf.abs(stfts)
 
         # Warp the linear scale spectrograms into the mel-scale.
         num_spectrogram_bins = stfts.shape[-1]

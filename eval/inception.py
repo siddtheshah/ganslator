@@ -9,6 +9,7 @@ from scipy.linalg import sqrtm
 from PIL import Image
 from tensorflow.keras.applications.inception_v3 import InceptionV3
 from tensorflow.keras.applications.inception_v3 import preprocess_input
+from skimage.transform import resize
 import os
 import glob
 
@@ -17,7 +18,7 @@ def scale_images(images, new_shape):
     images_list = list()
     for image in images:
         # resize
-        new_image = tf.image.resize(image, new_shape, 0)
+        new_image = resize(image, new_shape)
         # store
         images_list.append(new_image)
     return asarray(images_list)

@@ -4,7 +4,7 @@ from network.generator import *
 from tensorflow.keras.optimizers import Adam
 import datetime
 import matplotlib.pyplot as plt
-from PIL import Image
+from skimage.io import imsave
 
 import numpy as np
 import os
@@ -222,14 +222,14 @@ class GANslator:
         features_A, features_B, fake_A, fake_B, reconstr_A, reconstr_B = \
             self.predict(signals_A, signals_B, noise)
 
-        features_A = tf.image.resize(features_A[0], (256, 256))
-        features_B = tf.image.resize(features_B[0], (256, 256))
+        features_A = tf.squeeze(tf.image.resize(tf.expand_dims(features_A[0, :, :], -1), (256, 256)))
+        features_B = tf.squeeze(tf.image.resize(tf.expand_dims(features_B[0, :, :], -1), (256, 256)))
 
-        fake_A = tf.image.resize(fake_A[0], (256, 256))
-        fake_B = tf.image.resize(fake_B[0], (256, 256))
+        fake_A = tf.squeeze(tf.image.resize(tf.expand_dims(fake_A[0], -1), (256, 256)))
+        fake_B = tf.squeeze(tf.image.resize(tf.expand_dims(fake_B[0], -1), (256, 256)))
 
-        reconstr_A = tf.image.resize(reconstr_A[0], (256, 256))
-        reconstr_B = tf.image.resize(reconstr_B[0], (256, 256))
+        reconstr_A = tf.squeeze(tf.image.resize(tf.expand_dims(reconstr_A[0], -1), (256, 256)))
+        reconstr_B = tf.squeeze(tf.image.resize(tf.expand_dims(reconstr_B[0], -1), (256, 256)))
 
         return features_A.numpy(), features_B.numpy(), fake_A.numpy(),\
                fake_B.numpy(), reconstr_A.numpy(), reconstr_B.numpy()
@@ -247,21 +247,21 @@ class GANslator:
         plt.axis("off")
         i = 0
         for signal_A, signal_B in dataset.batch(1):
-            noise = tf.random.normal(([1], self.z_dim))
+            noise = tf.random.normal((1, self.z_dim))
 
             _, _, fake_A, fake_B, _, _ = self.predict(signal_A, signal_B, noise)
             signal_A_im, signal_B_im, fake_A_im, fake_B_im, _, _ = self.images_of_first(signal_A, signal_B, noise)
 
-            Image.fromarray(signal_A_im).imsave(os.path.join(im_path, "real" + str(i) + ".jpg"))
-            Image.fromarray(fake_A_im).imsave(os.path.join(im_path, "fake" + str(i) + ".jpg"))
+            imsave(os.path.join(im_path, "real" + str(i) + ".jpg"), signal_A_im)
+            imsave(os.path.join(im_path, "fake" + str(i) + ".jpg"), fake_A_im)
 
             fake_A_encode = tf.audio.encode_wav(tf.expand_dims(fake_A[0, :, 0], 1), sample_rate=22000)
             tf.io.write_file(os.path.join(sounds_path, "fake" + str(i) + ".wav"), fake_A_encode)
 
             i += 1
 
-            Image.fromarray(signal_B_im).imsave(os.path.join(im_path, "real" + str(i) + ".jpg"))
-            Image.fromarray(fake_B_im).imsave(os.path.join(im_path, "fake" + str(i) + ".jpg"))
+            imsave(os.path.join(im_path, "real" + str(i) + ".jpg"), signal_B_im)
+            imsave(os.path.join(im_path, "fake" + str(i) + ".jpg"), fake_B_im)
 
             fake_B_encode = tf.audio.encode_wav(tf.expand_dims(fake_B[0, :, 0], 1), sample_rate=22000)
             tf.io.write_file(os.path.join(sounds_path, "fake" + str(i) + ".wav"), fake_B_encode)
@@ -281,11 +281,11 @@ class GANslator:
         # Get fake and reconstructed outputs
         model_name = os.path.basename(save_path)
         prefix = os.path.join(model_name, "epoch{}_batch{}_".format(epoch, batch_i))
-
-        Image.fromarray(signal_A_im).imsave(prefix + "realA.jpg")
-        Image.fromarray(fake_A_im).imsave(prefix + "fakeA.jpg")
-        Image.fromarray(signal_B_im).imsave(prefix + "realB.jpg")
-        Image.fromarray(fake_B_im).imsave(prefix + "fakeB.jpg")
+        print(signal_A_im.shape)
+        imsave(prefix + "realA.jpg", signal_A_im)
+        imsave(prefix + "fakeA.jpg", fake_A_im)
+        imsave(prefix + "realB.jpg", signal_B_im)
+        imsave(prefix + "fakeB.jpg", fake_B_im)
 
         # Save some sample sounds
         fake_A_encode = tf.audio.encode_wav(tf.expand_dims(fake_A[0, :, 0], 1), sample_rate=22000)

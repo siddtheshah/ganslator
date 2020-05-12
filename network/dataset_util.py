@@ -23,7 +23,7 @@ def collect_matching_ravdess_files(ravdess_dir, emotion_input, emotion_output):
     # print(glob_pattern)
     globbed = glob.glob(glob_pattern, recursive=True)
     # print(globbed)
-    files = [f for f in globbed  if os.path.isfile(f)]
+    files = [f for f in globbed if os.path.isfile(f)]
     # files = ["fake.wav", "faker.wav"]
     input_fs = [x for x in files if is_matching_ravdess_emotion_file(x, emotion_input)]
     output_fs = [x for x in files if is_matching_ravdess_emotion_file(x, emotion_output)]

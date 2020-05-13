@@ -4,6 +4,7 @@ from numpy import trace
 from numpy import iscomplexobj
 from numpy import asarray
 from scipy.linalg import sqrtm
+from PIL import Image
 from tensorflow.keras.applications.inception_v3 import InceptionV3
 from tensorflow.keras.applications.inception_v3 import preprocess_input
 from skimage.transform import resize
@@ -23,6 +24,7 @@ def scale_images(images, new_shape):
 
 def calculate_inception_score(model, images):
     preds = model.predict(images)
+    preds = np.exp(preds) / np.sum(np.exp(preds), 1, keepdims=True)
     kl = preds * (np.log(preds) - np.log(np.expand_dims(np.mean(preds, 0), 0)))
     kl = np.mean(np.sum(kl, 1))
 

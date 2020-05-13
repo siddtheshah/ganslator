@@ -51,12 +51,12 @@ def calculate_frechet_distance(model, images1, images2):
     fid = ssdiff + trace(sigma1 + sigma2 - 2.0 * covmean)
     return fid
 
-def score(model_results_dir):
+def score(model_results_dir, max_images=200):
     # prepare the inception v3 model
     model = InceptionV3(include_top=False, pooling='avg', input_shape=(256, 256, 3))
     # define two fake collections of images
-    images_real_files = glob.glob(os.path.join(model_results_dir, "real*"))
-    images_fake_files = glob.glob(os.path.join(model_results_dir, "fake*"))
+    images_real_files = glob.glob(os.path.join(model_results_dir, "real*"))[:max_images]
+    images_fake_files = glob.glob(os.path.join(model_results_dir, "fake*"))[:max_images]
 
     images_real = [Image.open(file) for file in images_real_files]
     images_fake = [Image.open(file) for file in images_fake_files]

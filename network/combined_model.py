@@ -162,7 +162,7 @@ class GANslator:
         # Adversarial loss ground truths
         valid = np.ones(batch_size) * 0.98
         fake = np.ones(batch_size) * 0.02
-
+        batch_i = 0
         for epoch in range(epochs):
             for batch_i, (signals_A, signals_B) in enumerate(dataset.batch(batch_size)):
                 noise = tf.random.normal((batch_size, self.z_dim))
@@ -201,7 +201,7 @@ class GANslator:
                                 elapsed_time))
 
             # If at save interval => save generated image samples
-            if save_path and epoch % save_interval == 0:
+            if save_path and batch_i and epoch % save_interval == 0:
                 self.samples_during_training(save_path, epoch, batch_i, signals_A, signals_B, batch_size)
                 self.save_to_path(save_path)
 

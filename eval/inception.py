@@ -1,10 +1,8 @@
 import numpy as np
-import tensorflow as tf
 from numpy import cov
 from numpy import trace
 from numpy import iscomplexobj
 from numpy import asarray
-from numpy.random import randint
 from scipy.linalg import sqrtm
 from PIL import Image
 from tensorflow.keras.applications.inception_v3 import InceptionV3
@@ -26,11 +24,10 @@ def scale_images(images, new_shape):
 
 def calculate_inception_score(model, images):
     preds = model.predict(images)
-    preds = np.exp(preds) / np.sum(np.exp(preds), 1, keepdims=True)
     kl = preds * (np.log(preds) - np.log(np.expand_dims(np.mean(preds, 0), 0)))
     kl = np.mean(np.sum(kl, 1))
 
-    return kl
+    return np.exp(kl)
 
 # calculate frechet inception distance
 def calculate_frechet_distance(model, images1, images2):

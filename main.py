@@ -33,9 +33,8 @@ def get_dataset_from_args(configs):
     return ds_util.create_unconditioned_dataset_from_io_spec(input_spec, output_spec, configs['samples'])
 
 
-def run_training(configs, model_name):
+def run_training(configs, model_name, dataset):
     model = cm.GANslator(sample_size=configs['samples'], r_scale=configs['r_scale'], feature_size=configs['mel_bins'], filter_dim=configs['filter_dim'])
-    dataset = get_dataset_from_args(configs)
     model_path = os.path.join(configs["storage_dir"], model_name)
     if not os.path.isdir(model_path):
         os.mkdir(model_path)
@@ -44,11 +43,14 @@ def run_training(configs, model_name):
 
 
 def train_model(configs, model_name):
+    with tf.device('/CPU:0'):
+        dataset = get_dataset_from_args(configs)
     if configs['use_gpu']:
         with tf.device('/GPU:0'):
-            run_training(configs, model_name)
+            run_training(configs, model_name, dataset)
     else:
-        run_training(configs, model_name)
+        with tf.device('/CPU:0'):
+            run_training(configs, model_name, dataset)
 
     print("Model finished training.")
 

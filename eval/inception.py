@@ -81,7 +81,7 @@ def score(model_results_dir, max_images=200):
     # fid between real and fake
     fid = calculate_frechet_distance(inception, inception_real, inception_fake)
     print('FID: %.3f' % fid)
-    fake_inception_score = calculate_inception_score(inception, fake)
+    fake_inception_score = calculate_inception_score(inception, inception_fake)
     print('Inception: %.3f' % fake_inception_score)
     # fad between real and fake
     vgg_real = scale_images(real, (224, 224, 3))

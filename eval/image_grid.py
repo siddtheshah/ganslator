@@ -5,12 +5,12 @@ from PIL import Image
 import sys
 
 def square_grid(array, grid_cols):
-    nindex, height, width, intensity = array.shape
+    nindex, height, width = array.shape
     nrows = nindex//grid_cols
     assert nindex == nrows*grid_cols
-    result = (array.reshape(nrows, grid_cols, height, width, intensity)
+    result = (array.reshape(nrows, grid_cols, height, width)
               .swapaxes(1,2)
-              .reshape(height*nrows, width*grid_cols, intensity))
+              .reshape(height*nrows, width*grid_cols))
     return result
 
 def save_image_grids(model_results_image_dir, grid_dim=2, offset=0):
@@ -44,6 +44,7 @@ def save_image_grids(model_results_image_dir, grid_dim=2, offset=0):
     fakeB_grid = square_grid(np.stack(fakeB_list), grid_dim)
     ax4.imshow(fakeB_grid)
     plt.savefig(os.path.join(model_results_image_dir,'grid.png'))
+    print("Grid saved to: " + str(os.path.join(model_results_image_dir, 'grid.png')))
 
 if __name__ == "__main__":
     save_image_grids(sys.argv[1])

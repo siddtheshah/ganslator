@@ -7,8 +7,8 @@ from scipy.linalg import sqrtm
 from PIL import Image
 from tensorflow.keras.applications.inception_v3 import InceptionV3
 from tensorflow.keras.applications.vgg19 import VGG19
-import tensorflow.keras.applications.vgg19.preprocess_input
-from tensorflow.keras.applications.inception_v3 import preprocess_input
+import tensorflow.keras.applications.vgg19
+import tensorflow.keras.applications.inception_v3
 from skimage.transform import resize
 import os
 import glob
@@ -76,8 +76,8 @@ def score(model_results_dir, max_images=200):
     inception_real = scale_images(real, (256, 256, 3))
     inception_fake = scale_images(fake, (256, 256, 3))
     # pre-process images
-    inception_real = preprocess_input(inception_real)
-    inception_fake = preprocess_input(inception_fake)
+    inception_real = tensorflow.keras.applications.inception_v3.preprocess_input(inception_real)
+    inception_fake = tensorflow.keras.applications.inception_v3.preprocess_input(inception_fake)
     # fid between real and fake
     fid = calculate_frechet_distance(inception, inception_real, inception_fake)
     print('FID: %.3f' % fid)

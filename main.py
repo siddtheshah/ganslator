@@ -62,7 +62,7 @@ def eval_model(configs, model_name):
     model.load_from_path(os.path.join(configs["storage_dir"], model_name))
     dataset = get_dataset_from_args(configs)
     model_results_path = os.path.join(configs["result_dir"], model_name)
-     model.sample_for_eval(model_results_path, dataset)
+    model.sample_for_eval(model_results_path, dataset)
     images_path = os.path.join(model_results_path, "images")
     eval.inception.score(images_path)
 

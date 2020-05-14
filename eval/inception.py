@@ -34,8 +34,11 @@ def calculate_inception_score(model, images):
 # calculate frechet inception distance
 def calculate_frechet_distance(model, images1, images2):
     # calculate activations
-    act1 = model.predict(images1)
-    act2 = model.predict(images2)
+    m1 = model.predict(images1)
+    m2 = model.predict(images2)
+    print(np.shape(m1))
+    act1 = np.squeeze(m1)
+    act2 = np.squeeze(m2)
     # calculate mean and covariance statistics
     mu1, sigma1 = act1.mean(axis=0), cov(act1, rowvar=False)
     mu2, sigma2 = act2.mean(axis=0), cov(act2, rowvar=False)
@@ -47,8 +50,8 @@ def calculate_frechet_distance(model, images1, images2):
     if iscomplexobj(covmean):
         covmean = covmean.real
     # calculate score
-    fid = ssdiff + trace(sigma1 + sigma2 - 2.0 * covmean)
-    return fid
+    fd = ssdiff + trace(sigma1 + sigma2 - 2.0 * covmean)
+    return fd
 
 def score(model_results_dir, max_images=200):
     # prepare the inception v3 model
@@ -76,7 +79,7 @@ def score(model_results_dir, max_images=200):
     real = preprocess_input(real)
     fake = preprocess_input(fake)
     # fid between real and real
-    fid = calculate_frechet_distance(inception, real, real)
+    fid = calculate_frechet_distance(inception, real, fake)
     print('FID: %.3f' % fid)
     # fid between real and fake
     fad = calculate_frechet_distance(vgg, real, fake)

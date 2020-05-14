@@ -16,13 +16,15 @@ class GANslator:
                  feature_size=32,
                  r_scale=16,
                  z_dim=100,
-                 filter_dim=64):
+                 filter_dim=64,
+                 use_attn=True):
         # Store parameters for building sub-models
         self.sample_size = sample_size
         self.feature_size = feature_size
         self.r_scale = r_scale
         self.z_dim = z_dim
         self.filter_dim = filter_dim
+        self.use_attn = use_attn
 
         # Input shape
         self.input_shape = tf.constant([self.sample_size])
@@ -137,7 +139,7 @@ class GANslator:
         return combined
 
     def build_generator(self):
-        return GeneratorModel(self.sample_size, self.feature_size, self.z_dim, self.r_scale, self.filter_dim)
+        return GeneratorModel(self.sample_size, self.feature_size, self.z_dim, self.r_scale, self.filter_dim, self.use_attn)
 
     def build_discriminator(self):
         return DiscriminatorModel(self.sample_size, self.feature_size, self.r_scale, 2 * self.filter_dim)
@@ -255,7 +257,7 @@ class GANslator:
             imsave(os.path.join(im_path, "real" + str(i) + ".jpg"), signal_A_im)
             imsave(os.path.join(im_path, "fake" + str(i) + ".jpg"), fake_A_im)
 
-            fake_A_encode = tf.audio.encode_wav(tf.expand_dims(fake_A[0, :, 0], 1), sample_rate=22000)
+            fake_A_encode = tf.audio.encode_wav(tf.expand_dims(fake_A[0, :, 0], 1), sample_rate=16000)
             tf.io.write_file(os.path.join(sounds_path, "fake" + str(i) + ".wav"), fake_A_encode)
 
             i += 1
@@ -263,7 +265,7 @@ class GANslator:
             imsave(os.path.join(im_path, "real" + str(i) + ".jpg"), signal_B_im)
             imsave(os.path.join(im_path, "fake" + str(i) + ".jpg"), fake_B_im)
 
-            fake_B_encode = tf.audio.encode_wav(tf.expand_dims(fake_B[0, :, 0], 1), sample_rate=22000)
+            fake_B_encode = tf.audio.encode_wav(tf.expand_dims(fake_B[0, :, 0], 1), sample_rate=16000)
             tf.io.write_file(os.path.join(sounds_path, "fake" + str(i) + ".wav"), fake_B_encode)
 
             i += 1
@@ -288,10 +290,10 @@ class GANslator:
         imsave(prefix + "fakeB.jpg", fake_B_im)
 
         # Save some sample sounds
-        fake_A_encode = tf.audio.encode_wav(tf.expand_dims(fake_A[0, :, 0], 1), sample_rate=22000)
+        fake_A_encode = tf.audio.encode_wav(tf.expand_dims(fake_A[0, :, 0], 1), sample_rate=16000)
         tf.io.write_file(prefix + "fake_A.wav", fake_A_encode)
 
-        fake_B_encode = tf.audio.encode_wav(tf.expand_dims(fake_B[0, :, 0], 1), sample_rate=22000)
+        fake_B_encode = tf.audio.encode_wav(tf.expand_dims(fake_B[0, :, 0], 1), sample_rate=16000)
         tf.io.write_file(prefix + "fake_B.wav", fake_B_encode)
 
 

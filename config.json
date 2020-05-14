@@ -1,9 +1,9 @@
 {
   "samples": 16384,
   "r_scale": 16,
-  "mel_bins": 64,
-  "filter_dim": 64,
-  "epochs": 800,
+  "mel_bins": 32,
+  "filter_dim": 128,
+  "epochs": 500,
   "save_interval": 10,
   "batch_size": 16,
   "storage_dir": "models",

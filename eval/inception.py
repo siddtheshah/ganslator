@@ -7,6 +7,7 @@ from scipy.linalg import sqrtm
 from PIL import Image
 from tensorflow.keras.applications.inception_v3 import InceptionV3
 from tensorflow.keras.applications.vgg19 import VGG19
+import tensorflow.keras.applications.vgg19.preprocess_input
 from tensorflow.keras.applications.inception_v3 import preprocess_input
 from skimage.transform import resize
 import os
@@ -56,7 +57,7 @@ def calculate_frechet_distance(model, images1, images2):
 def score(model_results_dir, max_images=200):
     # prepare the inception v3 model
     inception = InceptionV3(include_top=False, pooling='avg', input_shape=(256, 256, 3))
-    vgg = VGG19(include_top=True, input_shape=(224, 224,3))
+    vgg = VGG19(include_top=True, input_shape=(224, 224, 3))
     # define two fake collections of images
     images_real_files = glob.glob(os.path.join(model_results_dir, "real*"))[:max_images]
     images_fake_files = glob.glob(os.path.join(model_results_dir, "fake*"))[:max_images]
@@ -72,21 +73,22 @@ def score(model_results_dir, max_images=200):
     real = real.astype('float32')
     fake = fake.astype('float32')
     # resize images
-    real = scale_images(real, (256, 256, 3))
-    fake = scale_images(fake, (256, 256, 3))
-    print('Scaled', real.shape, fake.shape)
+    inception_real = scale_images(real, (256, 256, 3))
+    inception_fake = scale_images(fake, (256, 256, 3))
     # pre-process images
-    real = preprocess_input(real)
-    fake = preprocess_input(fake)
-    # fid between real and real
-    fid = calculate_frechet_distance(inception, real, fake)
-    print('FID: %.3f' % fid)
+    inception_real = preprocess_input(inception_real)
+    inception_fake = preprocess_input(inception_fake)
     # fid between real and fake
-    real = scale_images(real, (224, 224, 3))
-    fake = scale_images(fake, (224, 224, 3))
-    fad = calculate_frechet_distance(vgg, real, fake)
-    print('FAD: %.3f' % fad)
+    fid = calculate_frechet_distance(inception, inception_real, inception_fake)
+    print('FID: %.3f' % fid)
     fake_inception_score = calculate_inception_score(inception, fake)
     print('Inception: %.3f' % fake_inception_score)
+    # fad between real and fake
+    vgg_real = scale_images(real, (224, 224, 3))
+    vgg_fake = scale_images(fake, (224, 224, 3))
+    vgg_real = tensorflow.keras.applications.vgg19.preprocess_input(vgg_real)
+    vgg_fake = tensorflow.keras.applications.vgg19.preprocess_input(vgg_fake)
+    fad = calculate_frechet_distance(vgg, vgg_real, vgg_fake)
+    print('FAD: %.3f' % fad)
 
     return fid, fad, fake_inception_score

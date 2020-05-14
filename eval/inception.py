@@ -56,7 +56,7 @@ def calculate_frechet_distance(model, images1, images2):
 def score(model_results_dir, max_images=200):
     # prepare the inception v3 model
     inception = InceptionV3(include_top=False, pooling='avg', input_shape=(256, 256, 3))
-    vgg = VGG19(include_top=False, input_shape=(256, 256,3))
+    vgg = VGG19(include_top=True, input_shape=(224, 224,3))
     # define two fake collections of images
     images_real_files = glob.glob(os.path.join(model_results_dir, "real*"))[:max_images]
     images_fake_files = glob.glob(os.path.join(model_results_dir, "fake*"))[:max_images]
@@ -82,6 +82,8 @@ def score(model_results_dir, max_images=200):
     fid = calculate_frechet_distance(inception, real, fake)
     print('FID: %.3f' % fid)
     # fid between real and fake
+    real = scale_images(real, (224, 224, 3))
+    fake = scale_images(fake, (224, 224, 3))
     fad = calculate_frechet_distance(vgg, real, fake)
     print('FAD: %.3f' % fad)
     fake_inception_score = calculate_inception_score(inception, fake)

@@ -6,9 +6,9 @@
   "epochs": 15,
   "save_interval": 1,
   "batch_size": 8,
+  "use_attn": true,
   "storage_dir": "models",
   "data_dir": "data",
   "result_dir": "results",
-  "learning_rate": 2e-3,
   "use_gpu": true
 }
